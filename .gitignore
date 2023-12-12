@@ -1,0 +1,31 @@
+# misc
+tests/
+data/
+
+# Python
+*.pyc
+__pycache__/
+venv/
+*.pyo
+*.pyd
+
+# IDEs
+.idea/
+.vscode/
+
+# Compiled files
+*.pyc
+*.pyo
+*.pyd
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Virtual environments
+venv/
+env/
