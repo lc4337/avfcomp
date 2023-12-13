@@ -54,7 +54,7 @@ class AVFComp(AVFParser):
         ypos = []
         for event in self.events:
             op.append(event["type"])
-            timestamps.append(event["gametime"])
+            timestamps.append(event["gametime"] // 10)
             xpos.append(event["xpos"])
             ypos.append(event["ypos"])
 
@@ -63,12 +63,10 @@ class AVFComp(AVFParser):
             for i in range(len(arr) - 1):
                 diff_arr.append(arr[i+1] - arr[i])
             return diff_arr
-        
+
         timestamps = get_diff(timestamps)
         xpos = get_diff(xpos)
-        xpos = [((x + 65535) if x < 0 else x) for x in xpos]
         ypos = get_diff(ypos)
-        ypos = [((y + 65535) if y < 0 else y) for y in ypos]
 
         data = b"\x00"
         for i in range(len(op)):
@@ -78,9 +76,9 @@ class AVFComp(AVFParser):
         for i in range(len(op)):
             data += timestamps[i].to_bytes(3)
         for i in range(len(op)):
-            data += xpos[i].to_bytes(2)
+            data += xpos[i].to_bytes(2, signed=True)
         for i in range(len(op)):
-            data += ypos[i].to_bytes(2)
+            data += ypos[i].to_bytes(2, signed=True)
         fout.write(data)
 
     def write_mines(self, fout):

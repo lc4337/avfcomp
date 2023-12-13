@@ -83,10 +83,10 @@ class AVFDecomp(AVFParser):
             timestamps.append(int.from_bytes(timestamp, byteorder='big'))
         for i in range(num_events):
             x = fin.read(2)
-            xpos.append(int.from_bytes(x, byteorder='big'))
+            xpos.append(int.from_bytes(x, byteorder='big', signed=True))
         for i in range(num_events):
             y = fin.read(2)
-            ypos.append(int.from_bytes(y, byteorder='big'))
+            ypos.append(int.from_bytes(y, byteorder='big', signed=True))
 
         def get_presum(arr):
             presum_arr = [arr[0]]
@@ -97,8 +97,6 @@ class AVFDecomp(AVFParser):
             return presum_arr
         
         timestamps = get_presum(timestamps)
-        xpos = [((x - 65535) if x > 32767 else x) for x in xpos]
-        ypos = [((y - 65535) if y > 32767 else y) for y in ypos]
         xpos = get_presum(xpos)
         ypos = get_presum(ypos)
 
@@ -106,7 +104,7 @@ class AVFDecomp(AVFParser):
         for i in range(len(op)):
             event = {
                 "type": op[i],
-                "gametime": timestamps[i],
+                "gametime": timestamps[i] * 10,
                 "xpos": xpos[i],
                 "ypos": ypos[i]
             }

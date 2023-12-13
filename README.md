@@ -1,5 +1,23 @@
 # AVF 压缩格式 V1.1 (Python 实现)
 
+## 使用说明
+
+项目根目下的avfcomp为包目录
+
+```python
+from avfcomp import AVFComp, AVFDecomp
+
+# compress
+path = "your/path/raw.avf"
+cvf = AVFComp.from_file(path)
+cvf.process_out("compress.cvf")
+
+# decompress
+path = "your/path/comp.cvf"
+avf = AVFDecomp.from_file(path)
+avf.process_out("raw.avf")
+```
+
 ## 格式说明
 
 - 整体使用 lzma 编码
