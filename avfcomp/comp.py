@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import lzma
-from io import SEEK_CUR
 
 from .base import AVFParser
 from .exceptions import InvalidReplayError
@@ -9,41 +8,79 @@ from .exceptions import InvalidReplayError
 
 class AVFComp(AVFParser):
     def process_out(self, filename):
-        with open(filename, "wb") as fout:
+        with lzma.open(filename, "wb") as fout:
             # compression algorithm
             fout.write(b"1")
 
             # version
             fout.write(self.version.to_bytes(1))
 
-            # parameters
-            self.write_parameters(fout)
+            # prefix
+            fout.write(self.prefix)
 
-            # game start timestamp
-            self.write_timestamp(fout)
-
-            # id
-            fout.write(self.name.encode("cp1252") + b"\r")
-
-            # verify
-            self.write_verification(fout)
+            # gamemode parameters
+            fout.write(self.level.to_bytes(1))
+            if self.level == 6:
+                fout.write((self.cols - 1).to_bytes(1))
+                fout.write((self.rows - 1).to_bytes(1))
 
             # mines
             self.write_mines(fout)
 
+            # prestamp
+            fout.write(self.prestamp)
+
+            # info
+            fout.write(b"[")
+            fout.write(self.ts_info.encode("cp1252"))
+            fout.write(b"]")
+
+            # preevent
+            fout.write(self.preevent)
+
             # events
             self.write_events(fout)
 
-    def write_events(self, fout):
-        data = b""
-        for event in self.events:
-            data += event["type"].to_bytes(1)
-            data += event["gametime"].to_bytes(3)
-            data += event["xpos"].to_bytes(2)
-            data += event["ypos"].to_bytes(2)
+            # presuffix
+            fout.write(self.presuffix)
 
-        data = lzma.compress(data)
-        fout.write(len(data).to_bytes(4))
+            # footer
+            fout.write(self.footer)
+
+    def write_events(self, fout):
+        op = []
+        timestamps = []
+        xpos = []
+        ypos = []
+        for event in self.events:
+            op.append(event["type"])
+            timestamps.append(event["gametime"])
+            xpos.append(event["xpos"])
+            ypos.append(event["ypos"])
+
+        def get_diff(arr):
+            diff_arr = [arr[0]]
+            for i in range(len(arr) - 1):
+                diff_arr.append(arr[i+1] - arr[i])
+            return diff_arr
+        
+        timestamps = get_diff(timestamps)
+        xpos = get_diff(xpos)
+        xpos = [((x + 65535) if x < 0 else x) for x in xpos]
+        ypos = get_diff(ypos)
+        ypos = [((y + 65535) if y < 0 else y) for y in ypos]
+
+        data = b"\x00"
+        for i in range(len(op)):
+            data += op[i].to_bytes(1)
+        # EOF
+        data += b"\x00"
+        for i in range(len(op)):
+            data += timestamps[i].to_bytes(3)
+        for i in range(len(op)):
+            data += xpos[i].to_bytes(2)
+        for i in range(len(op)):
+            data += ypos[i].to_bytes(2)
         fout.write(data)
 
     def write_mines(self, fout):
@@ -61,16 +98,4 @@ class AVFComp(AVFParser):
 
     def write_timestamp(self, fout):
         fout.write(b"00000000")
-
-    def write_verification(self, fout):
-        fout.write(self.prefix)
-
-        fout.write(len(self.prestamp).to_bytes(2))
-        fout.write(self.prestamp)
-
-        fout.write(len(self.preevent).to_bytes(2))
-        fout.write(self.preevent)
-
-        fout.write(self.presuffix)
-
 

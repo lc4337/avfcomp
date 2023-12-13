@@ -55,7 +55,7 @@ class AVFParser(BaseParser):
         num_mines (int): Number of mines in the game.
         mines (list): List of tuples representing the positions of the mines.
         prestamp (bytes): Bytes representing the prestamp of the AVF file.
-        ts_info (str): Timestamp information extracted from the AVF file.
+        ts_info (str): avf info between [] extracted from the AVF file.
         bbbv (str): Version information extracted from the AVF file.
         preevent (bytes): Bytes representing the preevent of the AVF file.
         events (list): List of dictionaries representing the mouse events in the AVF file.
@@ -261,8 +261,7 @@ class AVFParser(BaseParser):
                 fout.write((self.cols - 1).to_bytes(1))
                 fout.write((self.rows - 1).to_bytes(1))
                 fout.write(self.num_mines.to_bytes(2, "big"))
-                # WxxHxxMxxx
-                
+
             for mine in self.mines:
                 fout.write(mine[0].to_bytes(1))
                 fout.write(mine[1].to_bytes(1))
