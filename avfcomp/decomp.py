@@ -7,6 +7,8 @@ from .exceptions import InvalidReplayError
 
 
 class AVFDecomp(AVFParser):
+    VERSION_INFO = "Minesweeper Arbiter 0.52.3. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov".encode("cp1252")
+
     def process_buffer(self, filename):
         with lzma.open(filename, "rb") as fin:
             # Read compression algorithm
@@ -62,7 +64,7 @@ class AVFDecomp(AVFParser):
             self.read_presuffix(fin)
 
             # Read footer
-            self.footer = fin.read()
+            self.footer = fin.read() + b"\r" + self.VERSION_INFO
 
     def read_events(self, fin):
         op = []
@@ -77,16 +79,17 @@ class AVFDecomp(AVFParser):
                 break
             op.append(int.from_bytes(op_code))
 
+        zigzag_de = lambda x: (x >> 1) ^ -(x & 1)
         num_events = len(op)
         for i in range(num_events):
             timestamp = fin.read(3)
             timestamps.append(int.from_bytes(timestamp, byteorder='big'))
         for i in range(num_events):
             x = fin.read(2)
-            xpos.append(int.from_bytes(x, byteorder='big', signed=True))
+            xpos.append(zigzag_de(int.from_bytes(x, byteorder='big')))
         for i in range(num_events):
             y = fin.read(2)
-            ypos.append(int.from_bytes(y, byteorder='big', signed=True))
+            ypos.append(zigzag_de(int.from_bytes(y, byteorder='big')))
 
         def get_presum(arr):
             presum_arr = [arr[0]]

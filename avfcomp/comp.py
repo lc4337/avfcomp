@@ -45,7 +45,8 @@ class AVFComp(AVFParser):
             fout.write(self.presuffix)
 
             # footer
-            fout.write(self.footer)
+            footer_fields = self.footer.split(b"\r")
+            fout.write(b"\r".join(footer_fields[:-1]))
 
     def write_events(self, fout):
         op = []
@@ -68,6 +69,7 @@ class AVFComp(AVFParser):
         xpos = get_diff(xpos)
         ypos = get_diff(ypos)
 
+        zigzag = lambda x: (x << 1) ^ (x >> 31)
         data = b"\x00"
         for i in range(len(op)):
             data += op[i].to_bytes(1)
@@ -76,9 +78,9 @@ class AVFComp(AVFParser):
         for i in range(len(op)):
             data += timestamps[i].to_bytes(3)
         for i in range(len(op)):
-            data += xpos[i].to_bytes(2, signed=True)
+            data += zigzag(xpos[i]).to_bytes(2)
         for i in range(len(op)):
-            data += ypos[i].to_bytes(2, signed=True)
+            data += zigzag(ypos[i]).to_bytes(2)
         fout.write(data)
 
     def write_mines(self, fout):
@@ -90,10 +92,3 @@ class AVFComp(AVFParser):
             bit_idx = idx % 8
             data[byte_idx] |= 1 << (7 - bit_idx)
         fout.write(data)
-
-    def write_parameters(self, fout):
-        fout.write(bytes(1))
-
-    def write_timestamp(self, fout):
-        fout.write(b"00000000")
-
