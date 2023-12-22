@@ -63,14 +63,13 @@ class AVFComp(AVFParser):
         def get_diff(arr):
             diff_arr = [arr[0]]
             for i in range(len(arr) - 1):
-                diff_arr.append(arr[i+1] - arr[i])
+                diff_arr.append(arr[i + 1] - arr[i])
             return diff_arr
 
         timestamps = get_diff(timestamps)
         xpos = get_diff(xpos)
         ypos = get_diff(ypos)
 
-        
         zigzag = lambda x: (x << 1) ^ (x >> 31)
         xpos = list(map(zigzag, xpos))
         ypos = list(map(zigzag, ypos))

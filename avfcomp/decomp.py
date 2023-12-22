@@ -6,7 +6,9 @@ from .base import AVFParser
 
 
 class AVFDecomp(AVFParser):
-    VERSION_INFO = "Minesweeper Arbiter 0.52.3. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov".encode("cp1252")
+    VERSION_INFO = "Minesweeper Arbiter 0.52.3. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov".encode(
+        "cp1252"
+    )
 
     def process_buffer(self, filename):
         with lzma.open(filename, "rb") as fin:
@@ -42,7 +44,7 @@ class AVFDecomp(AVFParser):
             # Read info
             self.ts_info = b""
             while True:
-                byte = fin.read(1) 
+                byte = fin.read(1)
                 if byte == b"]":
                     break
                 self.ts_info += byte
@@ -78,15 +80,15 @@ class AVFDecomp(AVFParser):
         byte_len_dt = int.from_bytes(fin.read(1))
         for i in range(num_events):
             timestamp = fin.read(byte_len_dt)
-            timestamps.append(int.from_bytes(timestamp, byteorder='big'))
+            timestamps.append(int.from_bytes(timestamp, byteorder="big"))
         byte_len_dx = int.from_bytes(fin.read(1))
         for i in range(num_events):
             x = fin.read(byte_len_dx)
-            xpos.append(zigzag_de(int.from_bytes(x, byteorder='big')))
+            xpos.append(zigzag_de(int.from_bytes(x, byteorder="big")))
         byte_len_dy = int.from_bytes(fin.read(1))
         for i in range(num_events):
             y = fin.read(byte_len_dy)
-            ypos.append(zigzag_de(int.from_bytes(y, byteorder='big')))
+            ypos.append(zigzag_de(int.from_bytes(y, byteorder="big")))
 
         def get_presum(arr):
             presum_arr = [arr[0]]
@@ -95,7 +97,7 @@ class AVFDecomp(AVFParser):
                 presum += arr[i + 1]
                 presum_arr.append(presum)
             return presum_arr
-        
+
         timestamps = get_presum(timestamps)
         xpos = get_presum(xpos)
         ypos = get_presum(ypos)
@@ -106,7 +108,7 @@ class AVFDecomp(AVFParser):
                 "type": op[i],
                 "gametime": timestamps[i] * 10,
                 "xpos": xpos[i],
-                "ypos": ypos[i]
+                "ypos": ypos[i],
             }
             self.events.append(event)
 
@@ -138,7 +140,7 @@ class AVFDecomp(AVFParser):
             last2, last1 = last1, cur
 
         self.presuffix += fin.read(17)
-    
+
     def read_preevent(self, fin):
         self.preevent = b""
         last = fin.read(1)
