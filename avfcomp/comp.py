@@ -12,16 +12,16 @@ class AVFComp(AVFParser):
             fout.write(b"1")
 
             # version
-            fout.write(self.version.to_bytes(1))
+            fout.write(self.version.to_bytes(1, byteorder="big"))
 
             # prefix
             fout.write(self.prefix)
 
             # gamemode parameters
-            fout.write(self.level.to_bytes(1))
+            fout.write(self.level.to_bytes(1, byteorder="big"))
             if self.level == 6:
-                fout.write((self.cols - 1).to_bytes(1))
-                fout.write((self.rows - 1).to_bytes(1))
+                fout.write((self.cols - 1).to_bytes(1, byteorder="big"))
+                fout.write((self.rows - 1).to_bytes(1, byteorder="big"))
 
             # mines
             self.write_mines(fout)
@@ -63,14 +63,13 @@ class AVFComp(AVFParser):
         def get_diff(arr):
             diff_arr = [arr[0]]
             for i in range(len(arr) - 1):
-                diff_arr.append(arr[i+1] - arr[i])
+                diff_arr.append(arr[i + 1] - arr[i])
             return diff_arr
 
         timestamps = get_diff(timestamps)
         xpos = get_diff(xpos)
         ypos = get_diff(ypos)
 
-        
         zigzag = lambda x: (x << 1) ^ (x >> 31)
         xpos = list(map(zigzag, xpos))
         ypos = list(map(zigzag, ypos))
@@ -82,18 +81,18 @@ class AVFComp(AVFParser):
 
         data = b""
         for i in range(num_events):
-            data += op[i].to_bytes(1)
+            data += op[i].to_bytes(1, byteorder="big")
         # EOF
         data += b"\x00"
-        data += byte_len_dt.to_bytes(1)
+        data += byte_len_dt.to_bytes(1, byteorder="big")
         for i in range(num_events):
-            data += timestamps[i].to_bytes(byte_len_dt)
-        data += byte_len_dx.to_bytes(1)
+            data += timestamps[i].to_bytes(byte_len_dt, byteorder="big")
+        data += byte_len_dx.to_bytes(1, byteorder="big")
         for i in range(num_events):
-            data += xpos[i].to_bytes(byte_len_dx)
-        data += byte_len_dy.to_bytes(1)
+            data += xpos[i].to_bytes(byte_len_dx, byteorder="big")
+        data += byte_len_dy.to_bytes(1, byteorder="big")
         for i in range(num_events):
-            data += ypos[i].to_bytes(byte_len_dy)
+            data += ypos[i].to_bytes(byte_len_dy, byteorder="big")
         fout.write(data)
 
     def write_mines(self, fout):
