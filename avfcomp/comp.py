@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+"""Compression of an AVF file."""
 
 import lzma
 
@@ -6,49 +6,15 @@ from .base import AVFParser
 
 
 class AVFComp(AVFParser):
+    """Compression of an AVF file."""
+
     def process_out(self, filename):
-        with lzma.open(filename, "wb") as fout:
-            # compression algorithm
-            fout.write(b"1")
-
-            # version
-            fout.write(self.version.to_bytes(1, byteorder="big"))
-
-            # prefix
-            fout.write(self.prefix)
-
-            # gamemode parameters
-            fout.write(self.level.to_bytes(1, byteorder="big"))
-            if self.level == 6:
-                fout.write((self.cols - 1).to_bytes(1, byteorder="big"))
-                fout.write((self.rows - 1).to_bytes(1, byteorder="big"))
-
-            # mines
-            self.write_mines(fout)
-
-            # prestamp
-            fout.write(self.prestamp)
-
-            # info
-            fout.write(b"[")
-            fout.write(self.ts_info.encode("cp1252"))
-            fout.write(b"]")
-
-            # preevent
-            fout.write(self.preevent)
-            fout.write(b"\x00\x01")
-
-            # events
-            self.write_events(fout)
-
-            # presuffix
-            fout.write(self.presuffix)
-
-            # footer
-            footer_fields = self.footer.split(b"\r")
-            fout.write(b"\r".join(footer_fields[:-1]))
+        with lzma.open(filename, "wb") as fout:  # use lzma for compression
+            self.write_data(fout)
 
     def write_events(self, fout):
+        fout.write(b"\x00\x01")
+
         op = []
         timestamps = []
         xpos = []
@@ -93,6 +59,7 @@ class AVFComp(AVFParser):
         data += byte_len_dy.to_bytes(1, byteorder="big")
         for i in range(num_events):
             data += ypos[i].to_bytes(byte_len_dy, byteorder="big")
+
         fout.write(data)
 
     def write_mines(self, fout):

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+"""Decompression of an AVF file."""
 
 import lzma
 
@@ -6,61 +6,11 @@ from .base import AVFParser
 
 
 class AVFDecomp(AVFParser):
-    VERSION_INFO = "Minesweeper Arbiter 0.52.3. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov".encode(
-        "cp1252"
-    )
+    """Decompression of an AVF file."""
 
-    def process_buffer(self, filename):
+    def process_in(self, filename):
         with lzma.open(filename, "rb") as fin:
-            # Read compression algorithm
-            fin.read(1)
-
-            # Read version
-            self.version = int.from_bytes(fin.read(1), byteorder="big")
-
-            # Read prefix
-            self.prefix = fin.read(4)
-
-            # Read gamemode parameters
-            self.level = int.from_bytes(fin.read(1), byteorder="big")
-            if self.level == 6:
-                self.cols = int.from_bytes(fin.read(1), byteorder="big") + 1
-                self.rows = int.from_bytes(fin.read(1), byteorder="big") + 1
-            elif 3 <= self.level < 6:
-                self.cols, self.rows, self.num_mines = self.LEVELS_STAT[self.level - 3]
-
-            # Read mines
-            self.read_mines(fin)
-            self.num_mines = len(self.mines)
-
-            # Read prestamp
-            self.prestamp = b""
-            while True:
-                byte = fin.read(1)
-                if byte == b"[":
-                    break
-                self.prestamp += byte
-
-            # Read info
-            self.ts_info = b""
-            while True:
-                byte = fin.read(1)
-                if byte == b"]":
-                    break
-                self.ts_info += byte
-            self.ts_info = self.ts_info.decode("cp1252")
-
-            # Read preevent
-            self.read_preevent(fin)
-
-            # Read events
-            self.read_events(fin)
-
-            # Read presuffix
-            self.read_presuffix(fin)
-
-            # Read footer
-            self.footer = fin.read() + b"\r" + self.VERSION_INFO
+            self.read_data(fin)
 
     def read_events(self, fin):
         op = []
@@ -81,12 +31,13 @@ class AVFDecomp(AVFParser):
         for i in range(num_events):
             timestamp = fin.read(byte_len_dt)
             timestamps.append(int.from_bytes(timestamp, byteorder="big"))
+
         byte_len_dx = int.from_bytes(fin.read(1), byteorder="big")
         for i in range(num_events):
             x = fin.read(byte_len_dx)
             xpos.append(zigzag_de(int.from_bytes(x, byteorder="big")))
-        byte_len_dy = int.from_bytes(fin.read(1), byteorder="big")
 
+        byte_len_dy = int.from_bytes(fin.read(1), byteorder="big")
         for i in range(num_events):
             y = fin.read(byte_len_dy)
             ypos.append(zigzag_de(int.from_bytes(y, byteorder="big")))
@@ -126,28 +77,3 @@ class AVFDecomp(AVFParser):
                 if (data[byte_idx] >> (7 - bit_idx)) & 1:
                     mine = (j + 1, i + 1)
                     self.mines.append(mine)
-
-    def read_presuffix(self, fin):
-        buffer = fin.read(2)
-        self.presuffix = buffer
-        last2, last1 = buffer
-        ref = tuple(b"cs=")
-        while True:
-            byte = fin.read(1)
-            cur = ord(byte)
-            self.presuffix += byte
-            if (last2, last1, cur) == ref:
-                break
-            last2, last1 = last1, cur
-
-        self.presuffix += fin.read(17)
-
-    def read_preevent(self, fin):
-        self.preevent = b""
-        last = fin.read(1)
-        while True:
-            cur = fin.read(1)
-            if last == b"\x00" and cur == b"\x01":
-                break
-            self.preevent += last
-            last = cur
