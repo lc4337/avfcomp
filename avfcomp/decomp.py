@@ -86,6 +86,7 @@ class AVFDecomp(AVFParser):
             x = fin.read(byte_len_dx)
             xpos.append(zigzag_de(int.from_bytes(x, byteorder="big")))
         byte_len_dy = int.from_bytes(fin.read(1), byteorder="big")
+
         for i in range(num_events):
             y = fin.read(byte_len_dy)
             ypos.append(zigzag_de(int.from_bytes(y, byteorder="big")))
