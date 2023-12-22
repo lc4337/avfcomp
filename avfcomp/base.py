@@ -158,7 +158,7 @@ class AVFParser(BaseParser):
         while True:
             char = data.read(1)
             cur = ord(char)
-            if last == 0 and cur == 1:
+            if last <= 1 and cur == 1:
                 break
             last = cur
             self.preevent += char
