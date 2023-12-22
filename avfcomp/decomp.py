@@ -16,16 +16,16 @@ class AVFDecomp(AVFParser):
             fin.read(1)
 
             # Read version
-            self.version = int.from_bytes(fin.read(1))
+            self.version = int.from_bytes(fin.read(1), byteorder="big")
 
             # Read prefix
             self.prefix = fin.read(4)
 
             # Read gamemode parameters
-            self.level = int.from_bytes(fin.read(1))
+            self.level = int.from_bytes(fin.read(1), byteorder="big")
             if self.level == 6:
-                self.cols = int.from_bytes(fin.read(1)) + 1
-                self.rows = int.from_bytes(fin.read(1)) + 1
+                self.cols = int.from_bytes(fin.read(1), byteorder="big") + 1
+                self.rows = int.from_bytes(fin.read(1), byteorder="big") + 1
             elif 3 <= self.level < 6:
                 self.cols, self.rows, self.num_mines = self.LEVELS_STAT[self.level - 3]
 
@@ -73,19 +73,20 @@ class AVFDecomp(AVFParser):
             op_code = fin.read(1)
             if op_code == b"\x00":
                 break
-            op.append(int.from_bytes(op_code))
+            op.append(int.from_bytes(op_code, byteorder="big"))
 
         zigzag_de = lambda x: (x >> 1) ^ -(x & 1)
         num_events = len(op)
-        byte_len_dt = int.from_bytes(fin.read(1))
+        byte_len_dt = int.from_bytes(fin.read(1), byteorder="big")
         for i in range(num_events):
             timestamp = fin.read(byte_len_dt)
             timestamps.append(int.from_bytes(timestamp, byteorder="big"))
-        byte_len_dx = int.from_bytes(fin.read(1))
+        byte_len_dx = int.from_bytes(fin.read(1), byteorder="big")
         for i in range(num_events):
             x = fin.read(byte_len_dx)
             xpos.append(zigzag_de(int.from_bytes(x, byteorder="big")))
-        byte_len_dy = int.from_bytes(fin.read(1))
+        byte_len_dy = int.from_bytes(fin.read(1), byteorder="big")
+
         for i in range(num_events):
             y = fin.read(byte_len_dy)
             ypos.append(zigzag_de(int.from_bytes(y, byteorder="big")))

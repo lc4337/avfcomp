@@ -174,7 +174,7 @@ class AVFParser(BaseParser):
             ypos = (y1 << 8) + y2
             sec = (s1 << 8) + s2 - 1
             gametime = 1000 * sec + 10 * hun
-            
+
             if sec < 0:
                 self.presuffix += buffer
                 break
@@ -243,19 +243,19 @@ class AVFParser(BaseParser):
             None
         """
         with open(filename, "wb") as fout:
-            fout.write(self.version.to_bytes(1))
+            fout.write(self.version.to_bytes(1, byteorder="big"))
 
             fout.write(self.prefix)
 
-            fout.write(self.level.to_bytes(1))
+            fout.write(self.level.to_bytes(1, byteorder="big"))
             if self.level == 6:
-                fout.write((self.cols - 1).to_bytes(1))
-                fout.write((self.rows - 1).to_bytes(1))
-                fout.write(self.num_mines.to_bytes(2, "big"))
+                fout.write((self.cols - 1).to_bytes(1, byteorder="big"))
+                fout.write((self.rows - 1).to_bytes(1, byteorder="big"))
+                fout.write(self.num_mines.to_bytes(2, byteorder="big"))
 
             for mine in self.mines:
-                fout.write(mine[0].to_bytes(1))
-                fout.write(mine[1].to_bytes(1))
+                fout.write(mine[0].to_bytes(1, byteorder="big"))
+                fout.write(mine[1].to_bytes(1, byteorder="big"))
 
             fout.write(self.prestamp)
 
@@ -273,17 +273,16 @@ class AVFParser(BaseParser):
                 sec = gametime // 1000 + 1
                 hun = (gametime % 1000) // 10
 
-                fout.write(mouse.to_bytes(1))
-                fout.write((xpos >> 8).to_bytes(1))
-                fout.write((sec & 0xFF).to_bytes(1))
-                fout.write((xpos & 0xFF).to_bytes(1))
-                fout.write(hun.to_bytes(1))
-                fout.write((ypos >> 8).to_bytes(1))
-                fout.write((sec >> 8).to_bytes(1))
-                fout.write((ypos & 0xFF).to_bytes(1))
+                fout.write(mouse.to_bytes(1, byteorder="big"))
+                fout.write((xpos >> 8).to_bytes(1, byteorder="big"))
+                fout.write((sec & 0xFF).to_bytes(1, byteorder="big"))
+                fout.write((xpos & 0xFF).to_bytes(1, byteorder="big"))
+                fout.write(hun.to_bytes(1, byteorder="big"))
+                fout.write((ypos >> 8).to_bytes(1, byteorder="big"))
+                fout.write((sec >> 8).to_bytes(1, byteorder="big"))
+                fout.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
 
             fout.write(self.presuffix)
-            
             fout.write(self.footer)
 
     # def print(self):
