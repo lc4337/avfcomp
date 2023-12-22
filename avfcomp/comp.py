@@ -3,7 +3,6 @@
 import lzma
 
 from .base import AVFParser
-from .exceptions import InvalidReplayError
 
 
 class AVFComp(AVFParser):

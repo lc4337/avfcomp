@@ -3,7 +3,6 @@
 import lzma
 
 from .base import AVFParser
-from .exceptions import InvalidReplayError
 
 
 class AVFDecomp(AVFParser):
@@ -131,8 +130,6 @@ class AVFDecomp(AVFParser):
         while True:
             byte = fin.read(1)
             cur = ord(byte)
-            if cur == b"":
-                raise InvalidReplayError(self)
             self.presuffix += byte
             if (last2, last1, cur) == ref:
                 break
