@@ -3,7 +3,6 @@
 from io import BytesIO
 from io import SEEK_CUR
 
-from .exceptions import InvalidReplayError
 
 class BaseParser:
     def __init__(self, data_buffer, name=None):
@@ -101,9 +100,6 @@ class AVFParser(BaseParser):
         Args:
             data (file-like object): Buffer data containing the AVF file.
 
-        Raises:
-            InvalidReplayError: If the level in the AVF file is invalid.
-
         Returns:
             None
         """
@@ -116,10 +112,7 @@ class AVFParser(BaseParser):
         self.prefix = data.read(4)
 
         self.level = ord(data.read(1))
-        try:
-            self.properties["level"] = self.LEVELS[self.level]
-        except KeyError:
-            raise InvalidReplayError(self, message="Invalid level!")
+        self.properties["level"] = self.LEVELS[self.level]
 
         if 3 <= self.level < 6:
             self.cols, self.rows, self.num_mines = self.LEVELS_STAT[self.level - 3]
@@ -203,8 +196,6 @@ class AVFParser(BaseParser):
         while True:
             char = data.read(1)
             cur = ord(char)
-            if cur == b"":
-                raise InvalidReplayError(self)
             self.presuffix += char
             if (last2, last1, cur) == ref:
                 break
