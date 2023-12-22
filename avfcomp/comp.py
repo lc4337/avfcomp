@@ -53,6 +53,7 @@ class AVFComp(AVFParser):
         timestamps = []
         xpos = []
         ypos = []
+        num_events = len(self.events)
         for event in self.events:
             op.append(event["type"])
             timestamps.append(event["gametime"] // 10)
@@ -71,20 +72,28 @@ class AVFComp(AVFParser):
 
         
         zigzag = lambda x: (x << 1) ^ (x >> 31)
+        xpos = list(map(zigzag, xpos))
+        ypos = list(map(zigzag, ypos))
+
         min_bytes = lambda x: (x.bit_length() + 7) // 8 if x else 1
-        byte_len_timestamps = min_bytes(max(timestamps))
+        byte_len_dt = min_bytes(max(timestamps))
+        byte_len_dx = min_bytes(max(xpos))
+        byte_len_dy = min_bytes(max(ypos))
+
         data = b""
-        for i in range(len(op)):
+        for i in range(num_events):
             data += op[i].to_bytes(1)
         # EOF
         data += b"\x00"
-        data += byte_len_timestamps.to_bytes(1)
-        for i in range(len(op)):
-            data += timestamps[i].to_bytes(byte_len_timestamps)
-        for i in range(len(op)):
-            data += zigzag(xpos[i]).to_bytes(2)
-        for i in range(len(op)):
-            data += zigzag(ypos[i]).to_bytes(2)
+        data += byte_len_dt.to_bytes(1)
+        for i in range(num_events):
+            data += timestamps[i].to_bytes(byte_len_dt)
+        data += byte_len_dx.to_bytes(1)
+        for i in range(num_events):
+            data += xpos[i].to_bytes(byte_len_dx)
+        data += byte_len_dy.to_bytes(1)
+        for i in range(num_events):
+            data += ypos[i].to_bytes(byte_len_dy)
         fout.write(data)
 
     def write_mines(self, fout):

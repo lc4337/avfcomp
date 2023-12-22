@@ -75,15 +75,17 @@ class AVFDecomp(AVFParser):
 
         zigzag_de = lambda x: (x >> 1) ^ -(x & 1)
         num_events = len(op)
-        byte_len_timestamps = int.from_bytes(fin.read(1))
+        byte_len_dt = int.from_bytes(fin.read(1))
         for i in range(num_events):
-            timestamp = fin.read(byte_len_timestamps)
+            timestamp = fin.read(byte_len_dt)
             timestamps.append(int.from_bytes(timestamp, byteorder='big'))
+        byte_len_dx = int.from_bytes(fin.read(1))
         for i in range(num_events):
-            x = fin.read(2)
+            x = fin.read(byte_len_dx)
             xpos.append(zigzag_de(int.from_bytes(x, byteorder='big')))
+        byte_len_dy = int.from_bytes(fin.read(1))
         for i in range(num_events):
-            y = fin.read(2)
+            y = fin.read(byte_len_dy)
             ypos.append(zigzag_de(int.from_bytes(y, byteorder='big')))
 
         def get_presum(arr):

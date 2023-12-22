@@ -41,9 +41,11 @@ avf.process_out("raw.avf")
 
   * 按键序列（每个1字节）
   * 1字节\0表示按键序列结束（即可得出事件数量）
-  * 1字节表示每个时间戳需要的字节数量 `byte_len_timestamps`
-  * 时间戳序列（每个 `byte_len_timestamps` 字节）
-  * x坐标序列（每个2字节）
-  * y坐标序列（每个2字节）
+  * 1字节表示每个时间戳差分值需要的字节数量 `byte_len_dt`
+  * 时间戳差分序列（每个 `byte_len_dt` 字节）
+  * 1字节表示每个x坐标差分值所需的字节数量 `byte_len_dx`
+  * x坐标差分序列（每个 `byte_len_dx` 字节）
+  * 1字节表示每个y坐标差分值所需的字节数量 `byte_len_dy`
+  * y坐标差分序列（每个 `byte_len_dy` 字节）
 * `presuffix`
 * 文件结尾的字符串录像信息，去掉了末尾的版本信息
