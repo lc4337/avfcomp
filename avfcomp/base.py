@@ -284,23 +284,3 @@ class AVFParser(BaseParser):
 
             fout.write(self.presuffix)
             fout.write(self.footer)
-
-    # def print(self):
-    #     """print all attribute of record
-
-    #     print in human readable format for test
-    #     """
-
-    #     print("version: ", self.version)
-    #     print("is_freesweeper: ", self.is_freesweeper)
-    #     print("properties: ", self.properties)
-    #     print("cols: ", self.cols)
-    #     print("rows: ", self.rows)
-    #     print("num_mines: ", self.num_mines)
-    #     print("mines: ", self.mines)
-    #     print("ts_info: ", self.ts_info)
-    #     print("bbbv: ", self.bbbv)
-    #     print("events: ", self.events)
-    #     print("timeth: ", self.timeth)
-    #     print("name: ", self.name)
-    #     print("version_info: ", self.version_info)
