@@ -37,6 +37,7 @@ class AVFComp(AVFParser):
 
             # preevent
             fout.write(self.preevent)
+            fout.write(b"\x00\x01")
 
             # events
             self.write_events(fout)
@@ -69,14 +70,18 @@ class AVFComp(AVFParser):
         xpos = get_diff(xpos)
         ypos = get_diff(ypos)
 
+        
         zigzag = lambda x: (x << 1) ^ (x >> 31)
-        data = b"\x00"
+        min_bytes = lambda x: (x.bit_length() + 7) // 8 if x else 1
+        byte_len_timestamps = min_bytes(max(timestamps))
+        data = b""
         for i in range(len(op)):
             data += op[i].to_bytes(1)
         # EOF
         data += b"\x00"
+        data += byte_len_timestamps.to_bytes(1)
         for i in range(len(op)):
-            data += timestamps[i].to_bytes(3)
+            data += timestamps[i].to_bytes(byte_len_timestamps)
         for i in range(len(op)):
             data += zigzag(xpos[i]).to_bytes(2)
         for i in range(len(op)):

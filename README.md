@@ -18,7 +18,7 @@ avf = AVFDecomp.from_file(path)
 avf.process_out("raw.avf")
 ```
 
-## 格式说明
+## 格式说明 (目前仅支持 Arbiter 0.52.3)
 
 - 整体使用 lzma 编码
 
@@ -36,12 +36,13 @@ avf.process_out("raw.avf")
 * `prestamp`
 * 由 `[]`标志的录像信息
 * `preevent`
-* 1字节：\0表示事件列开始
+* 2字节：\x00\x01表示 `preevent` 结束
 * 事件列，目前除了按键列其他都存的差分序列，坐标序列差分后采取zigzag编码
 
   * 按键序列（每个1字节）
   * 1字节\0表示按键序列结束（即可得出事件数量）
-  * 时间戳序列（每个3字节）
+  * 1字节表示每个时间戳需要的字节数量 `byte_len_timestamps`
+  * 时间戳序列（每个 `byte_len_timestamps` 字节）
   * x坐标序列（每个2字节）
   * y坐标序列（每个2字节）
 * `presuffix`

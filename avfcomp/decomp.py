@@ -50,12 +50,7 @@ class AVFDecomp(AVFParser):
             self.ts_info = self.ts_info.decode("cp1252")
 
             # Read preevent
-            self.preevent = b""
-            while True:
-                byte = fin.read(1)
-                if byte == b"\x00":
-                    break
-                self.preevent += byte
+            self.read_preevent(fin)
 
             # Read events
             self.read_events(fin)
@@ -81,8 +76,9 @@ class AVFDecomp(AVFParser):
 
         zigzag_de = lambda x: (x >> 1) ^ -(x & 1)
         num_events = len(op)
+        byte_len_timestamps = int.from_bytes(fin.read(1))
         for i in range(num_events):
-            timestamp = fin.read(3)
+            timestamp = fin.read(byte_len_timestamps)
             timestamps.append(int.from_bytes(timestamp, byteorder='big'))
         for i in range(num_events):
             x = fin.read(2)
@@ -143,4 +139,13 @@ class AVFDecomp(AVFParser):
             last2, last1 = last1, cur
 
         self.presuffix += fin.read(17)
-  
+    
+    def read_preevent(self, fin):
+        self.preevent = b""
+        last = fin.read(1)
+        while True:
+            cur = fin.read(1)
+            if last == b"\x00" and cur == b"\x01":
+                break
+            self.preevent += last
+            last = cur
