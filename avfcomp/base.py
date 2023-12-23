@@ -20,8 +20,7 @@ class AVFParser:
         num_mines (int): Number of mines in the game.
         mines (list): List of tuples representing the positions of the mines.
         prestamp (bytes): Bytes representing the prestamp of the AVF file.
-        ts_info (str): avf info between [] extracted from the AVF file.
-        bbbv (str): Version information extracted from the AVF file.
+        ts_info (bytes): avf info between [] extracted from the AVF file.
         preevent (bytes): Bytes representing the preevent of the AVF file.
         events (list): List of dictionaries representing the mouse events in the AVF file.
         presuffix (bytes): Bytes representing the presuffix of the AVF file.
@@ -71,9 +70,8 @@ class AVFParser:
         self.events = []
         self.is_freesweeper = False
         self.version, self.level, self.cols, self.rows, self.num_mines = 0, 0, 0, 0, 0
-        self.ts_info, self.bbbv = "", ""
-        self.prefix, self.prestamp, self.preevent = b"", b"", b""
-        self.presuffix, self.footer = b"", b""
+        self.prefix, self.prestamp, self.ts_info = b"", b"", b""
+        self.preevent, self.presuffix, self.footer = b"", b"", b""
 
     def read_mines(self, fin):
         """Write the mines to the input buffer."""
@@ -135,17 +133,11 @@ class AVFParser:
                 break
             self.prestamp += char
 
-        info = b""
         while True:
             char = fin.read(1)
             if char == b"]":
                 break
-            info += char
-
-        # ts info
-        self.ts_info = info.decode("cp1252")
-        ts_fields = self.ts_info.split("|")
-        self.bbbv = ts_fields[-1][1:].split("T")[0]
+            self.ts_info += char
 
         self.preevent = fin.read(1)
         last = ord(self.preevent)
@@ -234,9 +226,7 @@ class AVFParser:
 
         fout.write(self.prestamp)
 
-        fout.write(b"[")
-        fout.write(self.ts_info.encode("cp1252"))
-        fout.write(b"]")
+        fout.write(b"[%s]" % self.ts_info)
 
         fout.write(self.preevent)
 
