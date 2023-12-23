@@ -1,42 +1,9 @@
-# -*- coding: utf-8 -*-
+"""Base parser for AVF files."""
 
-from io import BytesIO
 from io import SEEK_CUR
 
 
-class BaseParser:
-    def __init__(self, data_buffer, name=None):
-        self.name = name
-        self.process_buffer(data_buffer)
-
-    def process_buffer(self, data):
-        raise NotImplementedError
-
-    def process_out(self, filename):
-        raise NotImplementedError
-
-    def __str__(self):
-        return "{}({})".format(type(self).__name__, self.name)
-
-    @classmethod
-    def from_file(cls, filename):
-        with open(filename, "rb") as file:
-            return cls(file, name=filename)
-
-    @classmethod
-    def from_bytes(cls, data, name=None):
-        return cls(BytesIO(data), name=name)
-
-    @staticmethod
-    def read_int(binstr):
-        res = 0
-        for char in binstr:
-            res <<= 8
-            res += char
-        return res
-
-
-class AVFParser(BaseParser):
+class AVFParser:
     """
     AVFParser class for parsing AVF files.
 
@@ -44,7 +11,6 @@ class AVFParser(BaseParser):
         MOUSE_EVENT_TYPES (dict): Dictionary mapping mouse event types to their corresponding names.
         LEVELS (dict): Dictionary mapping level numbers to their corresponding names.
         LEVELS_STAT (list): List of tuples representing the columns, rows, and mines for each level.
-        properties (dict): Dictionary to store the properties of the AVF file.
         version (int): Version number of the AVF file.
         is_freesweeper (bool): Flag indicating whether the AVF file is from FreeSweeper.
         prefix (bytes): Bytes representing the prefix of the AVF file.
@@ -60,9 +26,6 @@ class AVFParser(BaseParser):
         events (list): List of dictionaries representing the mouse events in the AVF file.
         presuffix (bytes): Bytes representing the presuffix of the AVF file.
         footer (bytes): Bytes representing the footer of the AVF file.
-        timeth (int): Game time extracted from the second to last event in the AVF file.
-        name (str): Name extracted from the footer of the AVF file.
-        version_info (str): Version information extracted from the footer of the AVF file.
     """
 
     MOUSE_EVENT_TYPES = {
@@ -93,82 +56,39 @@ class AVFParser(BaseParser):
         (30, 16, 99),
     ]
 
-    def process_buffer(self, data):
-        """
-        Process the buffer data and extract information from the AVF file.
+    @staticmethod
+    def read_int(binstr):
+        """Read an integer from a binary string."""
+        res = 0
+        for char in binstr:
+            res <<= 8
+            res += char
+        return res
 
-        Args:
-            data (file-like object): Buffer data containing the AVF file.
-
-        Returns:
-            None
-        """
-        self.properties = {}
-        # version
-        self.version = ord(data.read(1))
-        self.is_freesweeper = not self.version
-
-        # no idea what these bytes do
-        self.prefix = data.read(4)
-
-        self.level = ord(data.read(1))
-        self.properties["level"] = self.LEVELS[self.level]
-
-        if 3 <= self.level < 6:
-            self.cols, self.rows, self.num_mines = self.LEVELS_STAT[self.level - 3]
-        elif self.level == 6:
-            self.cols = ord(data.read(1)) + 1
-            self.rows = ord(data.read(1)) + 1
-            self.num_mines = self.read_int(data.read(2))
-            # WxxHxxMxxx
-
+    def __init__(self):
+        """Initializations for variables."""
         self.mines = []
-        for ii in range(self.num_mines):
-            row = ord(data.read(1))
-            col = ord(data.read(1))
+        self.events = []
+        self.is_freesweeper = False
+        self.version, self.level, self.cols, self.rows, self.num_mines = 0, 0, 0, 0, 0
+        self.ts_info, self.bbbv = "", ""
+        self.prefix, self.prestamp, self.preevent = b"", b"", b""
+        self.presuffix, self.footer = b"", b""
+
+    def read_mines(self, fin):
+        """Write the mines to the input buffer."""
+        for _ in range(self.num_mines):
+            row = ord(fin.read(1))
+            col = ord(fin.read(1))
             self.mines.append((row, col))
 
-        self.prestamp = b""
+    def read_events(self, fin):
+        """Write the events to the input buffer."""
+        self.preevent = self.preevent[:-1]
+        fin.seek(-3, SEEK_CUR)
+
         while True:
-            char = data.read(1)
-            if char == b"[":
-                break
-            self.prestamp += char
-
-        data.seek(-3, SEEK_CUR)
-        self.properties["questionmarks"] = ord(data.read(1)) == 17
-
-        # read past opening "["
-        data.read(2)
-
-        info = b""
-        while True:
-            char = data.read(1)
-            if char == b"]":
-                break
-            info += char
-        # TODO: make sure this is always correct/add encoding param
-        # TODO: split this info into bits and make usable
-        self.ts_info = info.decode("cp1252")
-        ts_fields = self.ts_info.split("|")
-        self.bbbv = ts_fields[-1][1:].split("T")[0]
-
-        self.preevent = data.read(1)
-        last = ord(self.preevent)
-        while True:
-            char = data.read(1)
-            cur = ord(char)
-            if last <= 1 and cur == 1:
-                break
-            last = cur
-            self.preevent += char
-        self.preevent = self.preevent[:-2]
-        data.seek(-3, SEEK_CUR)
-
-        self.events = []
-        self.presuffix = b""
-        while True:
-            buffer = data.read(8)
+            buffer = fin.read(8)
             mouse, x1, s2, x2, hun, y1, s1, y2 = tuple(buffer)
             xpos = (x1 << 8) + x2
             ypos = (y1 << 8) + y2
@@ -189,12 +109,64 @@ class AVFParser(BaseParser):
                 }
             )
 
-        buffer = data.read(2)
+    def read_data(self, fin):
+        """Process the buffer data and extract information from the AVF file."""
+        # version
+        self.version = ord(fin.read(1))
+        self.is_freesweeper = not self.version
+
+        # no idea what these bytes do
+        self.prefix = fin.read(4)
+
+        self.level = ord(fin.read(1))
+
+        if 3 <= self.level < 6:
+            self.cols, self.rows, self.num_mines = self.LEVELS_STAT[self.level - 3]
+        elif self.level == 6:
+            self.cols = ord(fin.read(1)) + 1
+            self.rows = ord(fin.read(1)) + 1
+            self.num_mines = self.read_int(fin.read(2))
+
+        self.read_mines(fin)
+
+        while True:
+            char = fin.read(1)
+            if char == b"[":
+                break
+            self.prestamp += char
+
+        info = b""
+        while True:
+            char = fin.read(1)
+            if char == b"]":
+                break
+            info += char
+
+        # ts info
+        self.ts_info = info.decode("cp1252")
+        ts_fields = self.ts_info.split("|")
+        self.bbbv = ts_fields[-1][1:].split("T")[0]
+
+        self.preevent = fin.read(1)
+        last = ord(self.preevent)
+        while True:
+            char = fin.read(1)
+            cur = ord(char)
+            if last <= 1 and cur == 1:
+                break
+            last = cur
+            self.preevent += char
+
+        self.preevent = self.preevent[:-1]
+
+        self.read_events(fin)
+
+        buffer = fin.read(2)
         self.presuffix += buffer
         last2, last1 = buffer
         ref = tuple(b"cs=")
         while True:
-            char = data.read(1)
+            char = fin.read(1)
             cur = ord(char)
             self.presuffix += char
             if (last2, last1, cur) == ref:
@@ -203,104 +175,77 @@ class AVFParser(BaseParser):
 
         if self.is_freesweeper:
             for event in self.events:
-                ths = ord(data.read(1)) & 0xF
+                ths = ord(fin.read(1)) & 0xF
                 event["gametime"] += ths
 
-        self.presuffix += data.read(17)
+        self.presuffix += fin.read(17)
 
         # no idea what these bytes do
         if self.is_freesweeper:
-            while ord(data.read(1)) != 13:
+            while ord(fin.read(1)) != 13:
                 pass
 
-        footer = data.read()
-        footer_fields = footer.split(b"\r")
-        footer_meta_info = {}
-        footer_positional = []
-        for field in footer_fields:
-            key, *value = field.split(b":", 2)
-            if value:
-                (value,) = value
-                # TODO: make sure this is always correct/add encoding param
-                footer_meta_info[key] = value.decode("cp1252").strip()
-            else:
-                # TODO: make sure this is always correct/add encoding param
-                footer_positional.append(key.decode("cp1252"))
-
         # section => extract game time from the second to last event
-        self.footer = footer
-        self.timeth = self.events[-1]["gametime"]
-        self.name, self.version_info = footer_positional
+        self.footer = fin.read()
+
+    def process_in(self, filename):
+        """Process the AVF file and parse the data to memory."""
+        with open(filename, "rb") as fin:
+            self.read_data(fin)
+
+    def write_mines(self, fout):
+        """Write the mines to the output buffer."""
+        for mine in self.mines:
+            fout.write(mine[0].to_bytes(1, byteorder="big"))
+            fout.write(mine[1].to_bytes(1, byteorder="big"))
+
+    def write_events(self, fout):
+        """Write the events to the output buffer."""
+        for event in self.events:
+            mouse = event["type"]
+            xpos = event["xpos"]
+            ypos = event["ypos"]
+            gametime = event["gametime"]
+            sec = gametime // 1000 + 1
+            hun = (gametime % 1000) // 10
+
+            fout.write(mouse.to_bytes(1, byteorder="big"))
+            fout.write((xpos >> 8).to_bytes(1, byteorder="big"))
+            fout.write((sec & 0xFF).to_bytes(1, byteorder="big"))
+            fout.write((xpos & 0xFF).to_bytes(1, byteorder="big"))
+            fout.write(hun.to_bytes(1, byteorder="big"))
+            fout.write((ypos >> 8).to_bytes(1, byteorder="big"))
+            fout.write((sec >> 8).to_bytes(1, byteorder="big"))
+            fout.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
+
+    def write_data(self, fout):
+        """Write the data to the output buffer."""
+        fout.write(self.version.to_bytes(1, byteorder="big"))
+
+        fout.write(self.prefix)
+
+        fout.write(self.level.to_bytes(1, byteorder="big"))
+        if self.level == 6:
+            fout.write((self.cols - 1).to_bytes(1, byteorder="big"))
+            fout.write((self.rows - 1).to_bytes(1, byteorder="big"))
+            fout.write(self.num_mines.to_bytes(2, byteorder="big"))
+
+        self.write_mines(fout)
+
+        fout.write(self.prestamp)
+
+        fout.write(b"[")
+        fout.write(self.ts_info.encode("cp1252"))
+        fout.write(b"]")
+
+        fout.write(self.preevent)
+
+        self.write_events(fout)
+
+        fout.write(self.presuffix)
+        fout.write(self.footer)
 
     def process_out(self, filename):
-        """
-        Process the AVF file and write the output to a file.
-
-        Args:
-            filename (str): Name of the output file.
-
-        Returns:
-            None
-        """
+        """Process the AVF file and write the output to a file."""
         with open(filename, "wb") as fout:
-            fout.write(self.version.to_bytes(1, byteorder="big"))
-
-            fout.write(self.prefix)
-
-            fout.write(self.level.to_bytes(1, byteorder="big"))
-            if self.level == 6:
-                fout.write((self.cols - 1).to_bytes(1, byteorder="big"))
-                fout.write((self.rows - 1).to_bytes(1, byteorder="big"))
-                fout.write(self.num_mines.to_bytes(2, byteorder="big"))
-
-            for mine in self.mines:
-                fout.write(mine[0].to_bytes(1, byteorder="big"))
-                fout.write(mine[1].to_bytes(1, byteorder="big"))
-
-            fout.write(self.prestamp)
-
-            fout.write(b"[")
-            fout.write(self.ts_info.encode("cp1252"))
-            fout.write(b"]")
-
-            fout.write(self.preevent)
-
-            for event in self.events:
-                mouse = event["type"]
-                xpos = event["xpos"]
-                ypos = event["ypos"]
-                gametime = event["gametime"]
-                sec = gametime // 1000 + 1
-                hun = (gametime % 1000) // 10
-
-                fout.write(mouse.to_bytes(1, byteorder="big"))
-                fout.write((xpos >> 8).to_bytes(1, byteorder="big"))
-                fout.write((sec & 0xFF).to_bytes(1, byteorder="big"))
-                fout.write((xpos & 0xFF).to_bytes(1, byteorder="big"))
-                fout.write(hun.to_bytes(1, byteorder="big"))
-                fout.write((ypos >> 8).to_bytes(1, byteorder="big"))
-                fout.write((sec >> 8).to_bytes(1, byteorder="big"))
-                fout.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
-
-            fout.write(self.presuffix)
-            fout.write(self.footer)
-
-    # def print(self):
-    #     """print all attribute of record
-
-    #     print in human readable format for test
-    #     """
-
-    #     print("version: ", self.version)
-    #     print("is_freesweeper: ", self.is_freesweeper)
-    #     print("properties: ", self.properties)
-    #     print("cols: ", self.cols)
-    #     print("rows: ", self.rows)
-    #     print("num_mines: ", self.num_mines)
-    #     print("mines: ", self.mines)
-    #     print("ts_info: ", self.ts_info)
-    #     print("bbbv: ", self.bbbv)
-    #     print("events: ", self.events)
-    #     print("timeth: ", self.timeth)
-    #     print("name: ", self.name)
-    #     print("version_info: ", self.version_info)
+            self.write_data(fout)
