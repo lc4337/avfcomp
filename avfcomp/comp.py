@@ -8,6 +8,33 @@ from .base import AVFParser
 class AVFComp(AVFParser):
     """Compression of an AVF file."""
 
+    @staticmethod
+    def varint_compression(data):
+        """
+        Variable-length integer compression.
+
+        Details:
+        0 0000000: 1-byte storage,
+        1 0000000 00000000: 2-byte storage,
+        """
+
+        res = []
+        cur = 0
+        while cur < len(data):
+            if data[cur] < 128:  # 1-byte storage
+                res.append(data[cur])
+                cur += 1
+
+            elif data[cur] < 32768:
+                res.append(128 + (data[cur] >> 8))  # 2-byte storage, high bits
+                res.append(data[cur] & 0xFF)  # 2-byte storage, low bits
+                cur += 1
+
+            else:
+                raise ValueError("Integer too large.")
+
+        return res
+
     def process_out(self, filename):
         with lzma.open(filename, "wb") as fout:  # use lzma for compression
             self.write_data(fout)
@@ -19,7 +46,7 @@ class AVFComp(AVFParser):
         timestamps = []
         xpos = []
         ypos = []
-        num_events = len(self.events)
+        # num_events = len(self.events)
         for event in self.events:
             op.append(event["type"])
             timestamps.append(event["gametime"] // 10)
@@ -40,26 +67,10 @@ class AVFComp(AVFParser):
         xpos = list(map(zigzag, xpos))
         ypos = list(map(zigzag, ypos))
 
-        min_bytes = lambda x: (x.bit_length() + 7) // 8 if x else 1
-        byte_len_dt = min_bytes(max(timestamps))
-        byte_len_dx = min_bytes(max(xpos))
-        byte_len_dy = min_bytes(max(ypos))
-
-        data = b""
-        for i in range(num_events):
-            data += op[i].to_bytes(1, byteorder="big")
-        # EOF
-        data += b"\x00"
-        data += byte_len_dt.to_bytes(1, byteorder="big")
-        for i in range(num_events):
-            data += timestamps[i].to_bytes(byte_len_dt, byteorder="big")
-        data += byte_len_dx.to_bytes(1, byteorder="big")
-        for i in range(num_events):
-            data += xpos[i].to_bytes(byte_len_dx, byteorder="big")
-        data += byte_len_dy.to_bytes(1, byteorder="big")
-        for i in range(num_events):
-            data += ypos[i].to_bytes(byte_len_dy, byteorder="big")
-
+        data_cc = op + [0] + timestamps + xpos + ypos
+        data_cp = self.varint_compression(data_cc)
+        data = bytearray(data_cp)
+        fout.write(len(data).to_bytes(3, byteorder="big"))
         fout.write(data)
 
     def write_mines(self, fout):
