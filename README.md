@@ -20,7 +20,7 @@ avf.process_in(path)
 avf.process_out("raw.avf")
 ```
 
-## 格式说明 (目前仅支持 Arbiter 0.52.3)
+## 格式说明 (目前支持 Arbiter 0.52+)
 
 - 整体使用 lzma 编码
 
