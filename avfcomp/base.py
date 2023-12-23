@@ -55,14 +55,6 @@ class AVFParser:
         (30, 16, 99),
     ]
 
-    @staticmethod
-    def read_int(binstr):
-        """Read an integer from a binary string."""
-        res = 0
-        for char in binstr:
-            res <<= 8
-            res += char
-        return res
 
     def __init__(self):
         """Initializations for variables."""
@@ -134,7 +126,7 @@ class AVFParser:
         elif self.level == 6:
             self.cols = ord(fin.read(1)) + 1
             self.rows = ord(fin.read(1)) + 1
-            self.num_mines = self.read_int(fin.read(2))
+            self.num_mines = int.from_bytes(fin.read(2), byteorder="big")
 
         self.read_mines(fin)
 
@@ -223,11 +215,11 @@ class AVFParser:
 
     def write_footer(self, fout):
         """Write the footer to the output buffer."""
-        rtime_s = (
+        rtime = (
             str(self.events[-1]["gametime"] // 1000).encode("cp1252")
             + self.ts_info.split(b"|")[-1][-3:]
         )
-        rtime_raw = b"RealTime: %s" % rtime_s
+        rtime_raw = b"RealTime: %s" % rtime
         skin_raw = b"Skin: %s" % self.footer[0]
         idt_raw = self.footer[1]
         abt_raw = (
