@@ -9,12 +9,14 @@ from avfcomp import AVFComp, AVFDecomp
 
 # compress
 path = "your/path/raw.avf"
-cvf = AVFComp.from_file(path)
+cvf = AVFComp()
+cvf.process_in(path)
 cvf.process_out("compress.cvf")
 
 # decompress
 path = "your/path/comp.cvf"
-avf = AVFDecomp.from_file(path)
+avf = AVFDecomp()
+avf.process_in(path)
 avf.process_out("raw.avf")
 ```
 
