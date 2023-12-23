@@ -11,7 +11,6 @@ class AVFParser:
         MOUSE_EVENT_TYPES (dict): Dictionary mapping mouse event types to their corresponding names.
         LEVELS (dict): Dictionary mapping level numbers to their corresponding names.
         LEVELS_STAT (list): List of tuples representing the columns, rows, and mines for each level.
-        properties (dict): Dictionary to store the properties of the AVF file.
         version (int): Version number of the AVF file.
         is_freesweeper (bool): Flag indicating whether the AVF file is from FreeSweeper.
         prefix (bytes): Bytes representing the prefix of the AVF file.
@@ -27,9 +26,6 @@ class AVFParser:
         events (list): List of dictionaries representing the mouse events in the AVF file.
         presuffix (bytes): Bytes representing the presuffix of the AVF file.
         footer (bytes): Bytes representing the footer of the AVF file.
-        timeth (int): Game time extracted from the second to last event in the AVF file.
-        name (str): Name extracted from the footer of the AVF file.
-        version_info (str): Version information extracted from the footer of the AVF file.
     """
 
     MOUSE_EVENT_TYPES = {
@@ -73,12 +69,11 @@ class AVFParser:
         """Initializations for variables."""
         self.mines = []
         self.events = []
-        self.properties = {}
         self.is_freesweeper = False
-        self.version, self.level, self.prefix, self.ts_info = None, None, None, None
-        self.cols, self.rows, self.num_mines, self.bbbv = None, None, None, None
-        self.prestamp, self.preevent, self.presuffix = b"", b"", b""
-        self.footer, self.name, self.version_info = None, None, None
+        self.version, self.level, self.cols, self.rows, self.num_mines = 0, 0, 0, 0, 0
+        self.ts_info, self.bbbv = "", ""
+        self.prefix, self.prestamp, self.preevent = b"", b"", b""
+        self.presuffix, self.footer = b"", b""
 
     def read_mines(self, fin):
         """Write the mines to the input buffer."""
@@ -116,7 +111,6 @@ class AVFParser:
 
     def read_data(self, fin):
         """Process the buffer data and extract information from the AVF file."""
-        self.properties = {}
         # version
         self.version = ord(fin.read(1))
         self.is_freesweeper = not self.version
@@ -125,7 +119,6 @@ class AVFParser:
         self.prefix = fin.read(4)
 
         self.level = ord(fin.read(1))
-        self.properties["level"] = self.LEVELS[self.level]
 
         if 3 <= self.level < 6:
             self.cols, self.rows, self.num_mines = self.LEVELS_STAT[self.level - 3]
@@ -141,12 +134,6 @@ class AVFParser:
             if char == b"[":
                 break
             self.prestamp += char
-
-        fin.seek(-3, SEEK_CUR)
-        self.properties["questionmarks"] = ord(fin.read(1)) == 17
-
-        # read past opening "["
-        fin.read(2)
 
         info = b""
         while True:
