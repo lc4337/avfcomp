@@ -77,3 +77,7 @@ class AVFDecomp(AVFParser):
                 if (data[byte_idx] >> (7 - bit_idx)) & 1:
                     mine = (j + 1, i + 1)
                     self.mines.append(mine)
+
+    def read_footer(self, fin):
+        footer_simp = fin.read()
+        self.footer = footer_simp.split(b"\r")
