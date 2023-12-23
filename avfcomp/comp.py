@@ -71,3 +71,7 @@ class AVFComp(AVFParser):
             bit_idx = idx % 8
             data[byte_idx] |= 1 << (7 - bit_idx)
         fout.write(data)
+
+    def write_footer(self, fout):
+        footer_simp = b"\r".join(self.footer)
+        fout.write(footer_simp)

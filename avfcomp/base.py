@@ -66,12 +66,11 @@ class AVFParser:
 
     def __init__(self):
         """Initializations for variables."""
-        self.mines = []
-        self.events = []
+        self.mines, self.events, self.footer = [], [], []
         self.is_freesweeper = False
         self.version, self.level, self.cols, self.rows, self.num_mines = 0, 0, 0, 0, 0
         self.prefix, self.prestamp, self.ts_info = b"", b"", b""
-        self.preevent, self.presuffix, self.footer = b"", b"", b""
+        self.preevent, self.presuffix = b"", b""
 
     def read_mines(self, fin):
         """Write the mines to the input buffer."""
@@ -106,6 +105,18 @@ class AVFParser:
                     "ypos": ypos,
                 }
             )
+
+    def read_footer(self, fin):
+        """Write the footer to the input buffer."""
+        footer_raw = fin.read()
+        footer_list = footer_raw.split(b"\r")
+        skin_v = footer_list[1][footer_list[1].find(b"Skin: ") + 6 :]
+        idt = footer_list[2]
+        abt_v = footer_list[3][
+            footer_list[3].find(b"Arbiter") + 8 : footer_list[3].find(b"Copyright") - 2
+        ]
+
+        self.footer = [skin_v, idt, abt_v]
 
     def read_data(self, fin):
         """Process the buffer data and extract information from the AVF file."""
@@ -178,7 +189,7 @@ class AVFParser:
                 pass
 
         # section => extract game time from the second to last event
-        self.footer = fin.read()
+        self.read_footer(fin)
 
     def process_in(self, filename):
         """Process the AVF file and parse the data to memory."""
@@ -210,6 +221,22 @@ class AVFParser:
             fout.write((sec >> 8).to_bytes(1, byteorder="big"))
             fout.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
 
+    def write_footer(self, fout):
+        """Write the footer to the output buffer."""
+        rtime_s = str(self.events[-1]["gametime"] // 10)
+        rtime = f"{rtime_s[:-2]}.{rtime_s[-2:]}".encode("cp1252")
+
+        rtime_raw = b"RealTime: %s" % rtime
+        skin_raw = b"Skin: %s" % self.footer[0]
+        idt_raw = self.footer[1]
+        abt_raw = (
+            b"Minesweeper Arbiter %s. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov"
+            % self.footer[2]
+        )
+
+        footer_raw = b"\r".join([rtime_raw, skin_raw, idt_raw, abt_raw])
+        fout.write(footer_raw)
+
     def write_data(self, fout):
         """Write the data to the output buffer."""
         fout.write(self.version.to_bytes(1, byteorder="big"))
@@ -233,7 +260,8 @@ class AVFParser:
         self.write_events(fout)
 
         fout.write(self.presuffix)
-        fout.write(self.footer)
+
+        self.write_footer(fout)
 
     def process_out(self, filename):
         """Process the AVF file and write the output to a file."""
