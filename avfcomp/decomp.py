@@ -42,13 +42,12 @@ class AVFDecomp(AVFParser):
     def read_events(self, fin: LZMAFile):
         # Read op codes
         data_len = int.from_bytes(fin.read(3), byteorder="big")
-        data_cp = list(fin.read(data_len))
-        data = self.varint_decompression(data_cp)
+        data = list(fin.read(data_len))
 
         num_events = data.index(127)
-
         op = data[:num_events]
-        left_data = data[num_events + 1 :]
+
+        left_data = self.varint_decompression(data[num_events + 1 :])
         left_events = len(left_data) // 3
         left_event_cur = 0
 
