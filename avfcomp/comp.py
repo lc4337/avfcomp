@@ -9,13 +9,18 @@ class AVFComp(AVFParser):
     """Compression of an AVF file."""
 
     @staticmethod
+    def zigzag_enc(n):
+        """Zigzag transformation encode."""
+        return (n << 1) ^ (n >> 31)
+
+    @staticmethod
     def varint_compression(data):
         """
         Variable-length integer compression.
 
         Details:
         0 0000000: 1-byte storage,
-        1 0000000 00000000: 2-byte storage,
+        1 0000000 00000000: 2-byte storage.
         """
 
         res = []
@@ -63,9 +68,8 @@ class AVFComp(AVFParser):
         xpos = get_diff(xpos)
         ypos = get_diff(ypos)
 
-        zigzag = lambda x: (x << 1) ^ (x >> 31)
-        xpos = list(map(zigzag, xpos))
-        ypos = list(map(zigzag, ypos))
+        xpos = list(map(self.zigzag_enc, xpos))
+        ypos = list(map(self.zigzag_enc, ypos))
 
         data_cc = op + [0] + timestamps + xpos + ypos
         data_cp = self.varint_compression(data_cc)

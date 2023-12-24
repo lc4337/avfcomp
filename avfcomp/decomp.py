@@ -9,6 +9,11 @@ class AVFDecomp(AVFParser):
     """Decompression of an AVF file."""
 
     @staticmethod
+    def zigzag_dec(n):
+        """Zigzag transformation decode."""
+        return (n >> 1) ^ -(n & 1)
+
+    @staticmethod
     def varint_decompression(data):
         """Variable-length integer decompression."""
 
@@ -52,9 +57,8 @@ class AVFDecomp(AVFParser):
         xpos = data[2 * num_events + 1 : 3 * num_events + 1]
         ypos = data[3 * num_events + 1 :]
 
-        zigzag_de = lambda x: (x >> 1) ^ -(x & 1)
-        xpos = list(map(zigzag_de, xpos))
-        ypos = list(map(zigzag_de, ypos))
+        xpos = list(map(self.zigzag_dec, xpos))
+        ypos = list(map(self.zigzag_dec, ypos))
 
         def get_presum(arr):
             presum_arr = [arr[0]]
