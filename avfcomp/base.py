@@ -1,6 +1,8 @@
 """Base parser for AVF files."""
 
-from io import SEEK_CUR
+from io import BufferedWriter, BufferedReader, SEEK_CUR
+from lzma import LZMAFile
+from typing import List, Dict, Tuple, Union
 
 
 class AVFParser:
@@ -12,7 +14,6 @@ class AVFParser:
         LEVELS (dict): Dictionary mapping level numbers to their corresponding names.
         LEVELS_STAT (list): List of tuples representing the columns, rows, and mines for each level.
         version (int): Version number of the AVF file.
-        is_freesweeper (bool): Flag indicating whether the AVF file is from FreeSweeper.
         prefix (bytes): Bytes representing the prefix of the AVF file.
         level (int): Level of the game.
         cols (int): Number of columns in the game grid.
@@ -41,37 +42,30 @@ class AVFParser:
         21: "lmb_up",
     }
 
-    LEVELS = {
-        3: "beginner",
-        4: "intermediate",
-        5: "expert",
-        6: "custom",
-    }
-
-    LEVELS_STAT = [
+    LEVELS_STAT: List[Tuple[int, int, int]] = [
         # (cols, rows, mines)
         (8, 8, 10),
         (16, 16, 40),
         (30, 16, 99),
     ]
 
-
     def __init__(self):
         """Initializations for variables."""
-        self.mines, self.events, self.footer = [], [], []
-        self.is_freesweeper = False
+        self.mines: List[Tuple[int, int]] = []
+        self.events: List[Dict[str, int]] = []
+        self.footer: List[bytes] = []
         self.version, self.level, self.cols, self.rows, self.num_mines = 0, 0, 0, 0, 0
         self.prefix, self.prestamp, self.ts_info = b"", b"", b""
         self.preevent, self.presuffix = b"", b""
 
-    def read_mines(self, fin):
+    def read_mines(self, fin: Union[BufferedReader, LZMAFile]):
         """Write the mines to the input buffer."""
         for _ in range(self.num_mines):
             row = ord(fin.read(1))
             col = ord(fin.read(1))
             self.mines.append((row, col))
 
-    def read_events(self, fin):
+    def read_events(self, fin: Union[BufferedReader, LZMAFile]):
         """Write the events to the input buffer."""
         self.preevent = self.preevent[:-1]
         fin.seek(-3, SEEK_CUR)
@@ -88,33 +82,31 @@ class AVFParser:
                 self.presuffix += buffer
                 break
 
+            assert mouse in self.MOUSE_EVENT_TYPES
+
             self.events.append(
                 {
                     "type": mouse,
-                    "subtype": self.MOUSE_EVENT_TYPES[mouse],
                     "gametime": gametime,
                     "xpos": xpos,
                     "ypos": ypos,
                 }
             )
 
-    def read_footer(self, fin):
+    def read_footer(self, fin: Union[BufferedReader, LZMAFile]):
         """Write the footer to the input buffer."""
         footer_raw = fin.read()
         footer_list = footer_raw.split(b"\r")
         skin_v = footer_list[1][footer_list[1].find(b"Skin: ") + 6 :]
         idt = footer_list[2]
-        abt_v = footer_list[3][
-            footer_list[3].find(b"Arbiter") + 8 : footer_list[3].find(b"Copyright") - 2
-        ]
+        abt_v = footer_list[3][footer_list[3].find(b"Arbiter") + 8 : footer_list[3].find(b"Copyright") - 2]
 
         self.footer = [skin_v, idt, abt_v]
 
-    def read_data(self, fin):
+    def read_data(self, fin: Union[BufferedReader, LZMAFile]):
         """Process the buffer data and extract information from the AVF file."""
         # version
         self.version = ord(fin.read(1))
-        self.is_freesweeper = not self.version
 
         # no idea what these bytes do
         self.prefix = fin.read(4)
@@ -168,33 +160,23 @@ class AVFParser:
                 break
             last2, last1 = last1, cur
 
-        if self.is_freesweeper:
-            for event in self.events:
-                ths = ord(fin.read(1)) & 0xF
-                event["gametime"] += ths
-
         self.presuffix += fin.read(17)
-
-        # no idea what these bytes do
-        if self.is_freesweeper:
-            while ord(fin.read(1)) != 13:
-                pass
 
         # section => extract game time from the second to last event
         self.read_footer(fin)
 
-    def process_in(self, filename):
+    def process_in(self, filename: str):
         """Process the AVF file and parse the data to memory."""
         with open(filename, "rb") as fin:
             self.read_data(fin)
 
-    def write_mines(self, fout):
+    def write_mines(self, fout: Union[BufferedWriter, LZMAFile]):
         """Write the mines to the output buffer."""
         for mine in self.mines:
             fout.write(mine[0].to_bytes(1, byteorder="big"))
             fout.write(mine[1].to_bytes(1, byteorder="big"))
 
-    def write_events(self, fout):
+    def write_events(self, fout: Union[BufferedWriter, LZMAFile]):
         """Write the events to the output buffer."""
         for event in self.events:
             mouse = event["type"]
@@ -213,24 +195,18 @@ class AVFParser:
             fout.write((sec >> 8).to_bytes(1, byteorder="big"))
             fout.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
 
-    def write_footer(self, fout):
+    def write_footer(self, fout: Union[BufferedWriter, LZMAFile]):
         """Write the footer to the output buffer."""
-        rtime = (
-            str(self.events[-1]["gametime"] // 1000).encode("cp1252")
-            + self.ts_info.split(b"|")[-1][-3:]
-        )
+        rtime = str(self.events[-1]["gametime"] // 1000).encode("cp1252") + self.ts_info.split(b"|")[-1][-3:]
         rtime_raw = b"RealTime: %s" % rtime
         skin_raw = b"Skin: %s" % self.footer[0]
         idt_raw = self.footer[1]
-        abt_raw = (
-            b"Minesweeper Arbiter %s. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov"
-            % self.footer[2]
-        )
+        abt_raw = b"Minesweeper Arbiter %s. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov" % self.footer[2]
 
         footer_raw = b"\r".join([rtime_raw, skin_raw, idt_raw, abt_raw])
         fout.write(footer_raw)
 
-    def write_data(self, fout):
+    def write_data(self, fout: Union[BufferedWriter, LZMAFile]):
         """Write the data to the output buffer."""
         fout.write(self.version.to_bytes(1, byteorder="big"))
 
@@ -256,7 +232,7 @@ class AVFParser:
 
         self.write_footer(fout)
 
-    def process_out(self, filename):
+    def process_out(self, filename: str):
         """Process the AVF file and write the output to a file."""
         with open(filename, "wb") as fout:
             self.write_data(fout)

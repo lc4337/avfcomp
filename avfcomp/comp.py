@@ -1,6 +1,8 @@
 """Compression of an AVF file."""
 
 import lzma
+from lzma import LZMAFile
+from typing import List
 
 from .base import AVFParser
 
@@ -9,13 +11,18 @@ class AVFComp(AVFParser):
     """Compression of an AVF file."""
 
     @staticmethod
-    def varint_compression(data):
+    def zigzag_enc(n: int) -> int:
+        """Zigzag transformation encode."""
+        return (n << 1) ^ (n >> 31)
+
+    @staticmethod
+    def varint_compression(data: List[int]) -> List[int]:
         """
         Variable-length integer compression.
 
         Details:
         0 0000000: 1-byte storage,
-        1 0000000 00000000: 2-byte storage,
+        1 0000000 00000000: 2-byte storage.
         """
 
         res = []
@@ -35,17 +42,17 @@ class AVFComp(AVFParser):
 
         return res
 
-    def process_out(self, filename):
+    def process_out(self, filename: str):
         with lzma.open(filename, "wb") as fout:  # use lzma for compression
             self.write_data(fout)
 
-    def write_events(self, fout):
+    def write_events(self, fout: LZMAFile):
         fout.write(b"\x00\x01")
 
-        op = []
-        timestamps = []
-        xpos = []
-        ypos = []
+        op: List[int] = []
+        timestamps: List[int] = []
+        xpos: List[int] = []
+        ypos: List[int] = []
         # num_events = len(self.events)
         for event in self.events:
             op.append(event["type"])
@@ -53,7 +60,7 @@ class AVFComp(AVFParser):
             xpos.append(event["xpos"])
             ypos.append(event["ypos"])
 
-        def get_diff(arr):
+        def get_diff(arr: List[int]) -> List[int]:
             diff_arr = [arr[0]]
             for i in range(len(arr) - 1):
                 diff_arr.append(arr[i + 1] - arr[i])
@@ -63,9 +70,8 @@ class AVFComp(AVFParser):
         xpos = get_diff(xpos)
         ypos = get_diff(ypos)
 
-        zigzag = lambda x: (x << 1) ^ (x >> 31)
-        xpos = list(map(zigzag, xpos))
-        ypos = list(map(zigzag, ypos))
+        xpos = list(map(self.zigzag_enc, xpos))
+        ypos = list(map(self.zigzag_enc, ypos))
 
         data_cc = op + [0] + timestamps + xpos + ypos
         data_cp = self.varint_compression(data_cc)
@@ -73,7 +79,7 @@ class AVFComp(AVFParser):
         fout.write(len(data).to_bytes(3, byteorder="big"))
         fout.write(data)
 
-    def write_mines(self, fout):
+    def write_mines(self, fout: LZMAFile):
         size = (self.rows * self.cols + 7) // 8
         data = bytearray(size)
         for mine in self.mines:
@@ -83,6 +89,6 @@ class AVFComp(AVFParser):
             data[byte_idx] |= 1 << (7 - bit_idx)
         fout.write(data)
 
-    def write_footer(self, fout):
+    def write_footer(self, fout: LZMAFile):
         footer_simp = b"\r".join(self.footer)
         fout.write(footer_simp)
