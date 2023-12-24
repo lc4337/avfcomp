@@ -1,7 +1,9 @@
 """Base parser for AVF files."""
 
 from io import BufferedWriter, BufferedReader, SEEK_CUR
-from typing import List, Tuple
+from lzma import LZMAFile
+from typing import List, Tuple, Union
+
 
 class AVFParser:
     """
@@ -54,14 +56,14 @@ class AVFParser:
         self.prefix, self.prestamp, self.ts_info = b"", b"", b""
         self.preevent, self.presuffix = b"", b""
 
-    def read_mines(self, fin: BufferedReader):
+    def read_mines(self, fin: Union[BufferedReader, LZMAFile]):
         """Write the mines to the input buffer."""
         for _ in range(self.num_mines):
             row = ord(fin.read(1))
             col = ord(fin.read(1))
             self.mines.append((row, col))
 
-    def read_events(self, fin: BufferedReader):
+    def read_events(self, fin: Union[BufferedReader, LZMAFile]):
         """Write the events to the input buffer."""
         self.preevent = self.preevent[:-1]
         fin.seek(-3, SEEK_CUR)
@@ -88,19 +90,17 @@ class AVFParser:
                 }
             )
 
-    def read_footer(self, fin: BufferedReader):
+    def read_footer(self, fin: Union[BufferedReader, LZMAFile]):
         """Write the footer to the input buffer."""
         footer_raw = fin.read()
         footer_list = footer_raw.split(b"\r")
         skin_v = footer_list[1][footer_list[1].find(b"Skin: ") + 6 :]
         idt = footer_list[2]
-        abt_v = footer_list[3][
-            footer_list[3].find(b"Arbiter") + 8 : footer_list[3].find(b"Copyright") - 2
-        ]
+        abt_v = footer_list[3][footer_list[3].find(b"Arbiter") + 8 : footer_list[3].find(b"Copyright") - 2]
 
         self.footer = [skin_v, idt, abt_v]
 
-    def read_data(self, fin: BufferedReader):
+    def read_data(self, fin: Union[BufferedReader, LZMAFile]):
         """Process the buffer data and extract information from the AVF file."""
         # version
         self.version = ord(fin.read(1))
@@ -167,13 +167,13 @@ class AVFParser:
         with open(filename, "rb") as fin:
             self.read_data(fin)
 
-    def write_mines(self, fout: BufferedWriter):
+    def write_mines(self, fout: Union[BufferedWriter, LZMAFile]):
         """Write the mines to the output buffer."""
         for mine in self.mines:
             fout.write(mine[0].to_bytes(1, byteorder="big"))
             fout.write(mine[1].to_bytes(1, byteorder="big"))
 
-    def write_events(self, fout: BufferedWriter):
+    def write_events(self, fout: Union[BufferedWriter, LZMAFile]):
         """Write the events to the output buffer."""
         for event in self.events:
             mouse = event["type"]
@@ -192,24 +192,18 @@ class AVFParser:
             fout.write((sec >> 8).to_bytes(1, byteorder="big"))
             fout.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
 
-    def write_footer(self, fout: BufferedWriter):
+    def write_footer(self, fout: Union[BufferedWriter, LZMAFile]):
         """Write the footer to the output buffer."""
-        rtime = (
-            str(self.events[-1]["gametime"] // 1000).encode("cp1252")
-            + self.ts_info.split(b"|")[-1][-3:]
-        )
+        rtime = str(self.events[-1]["gametime"] // 1000).encode("cp1252") + self.ts_info.split(b"|")[-1][-3:]
         rtime_raw = b"RealTime: %s" % rtime
         skin_raw = b"Skin: %s" % self.footer[0]
         idt_raw = self.footer[1]
-        abt_raw = (
-            b"Minesweeper Arbiter %s. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov"
-            % self.footer[2]
-        )
+        abt_raw = b"Minesweeper Arbiter %s. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov" % self.footer[2]
 
         footer_raw = b"\r".join([rtime_raw, skin_raw, idt_raw, abt_raw])
         fout.write(footer_raw)
 
-    def write_data(self, fout: BufferedWriter):
+    def write_data(self, fout: Union[BufferedWriter, LZMAFile]):
         """Write the data to the output buffer."""
         fout.write(self.version.to_bytes(1, byteorder="big"))
 
