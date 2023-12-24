@@ -2,7 +2,7 @@
 
 from io import BufferedWriter, BufferedReader, SEEK_CUR
 from lzma import LZMAFile
-from typing import List, Tuple, Union
+from typing import List, Dict, Tuple, Union
 
 
 class AVFParser:
@@ -51,7 +51,9 @@ class AVFParser:
 
     def __init__(self):
         """Initializations for variables."""
-        self.mines, self.events, self.footer = [], [], []
+        self.mines: List[Tuple[int, int]] = []
+        self.events: List[Dict[str, int]] = []
+        self.footer: List[bytes] = []
         self.version, self.level, self.cols, self.rows, self.num_mines = 0, 0, 0, 0, 0
         self.prefix, self.prestamp, self.ts_info = b"", b"", b""
         self.preevent, self.presuffix = b"", b""
@@ -80,10 +82,11 @@ class AVFParser:
                 self.presuffix += buffer
                 break
 
+            assert mouse in self.MOUSE_EVENT_TYPES
+
             self.events.append(
                 {
                     "type": mouse,
-                    "subtype": self.MOUSE_EVENT_TYPES[mouse],
                     "gametime": gametime,
                     "xpos": xpos,
                     "ypos": ypos,

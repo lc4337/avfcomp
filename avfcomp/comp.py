@@ -49,10 +49,10 @@ class AVFComp(AVFParser):
     def write_events(self, fout: LZMAFile):
         fout.write(b"\x00\x01")
 
-        op = []
-        timestamps = []
-        xpos = []
-        ypos = []
+        op: List[int] = []
+        timestamps: List[int] = []
+        xpos: List[int] = []
+        ypos: List[int] = []
         # num_events = len(self.events)
         for event in self.events:
             op.append(event["type"])
@@ -60,7 +60,7 @@ class AVFComp(AVFParser):
             xpos.append(event["xpos"])
             ypos.append(event["ypos"])
 
-        def get_diff(arr):
+        def get_diff(arr: List[int]) -> List[int]:
             diff_arr = [arr[0]]
             for i in range(len(arr) - 1):
                 diff_arr.append(arr[i + 1] - arr[i])

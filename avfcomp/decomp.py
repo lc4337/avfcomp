@@ -55,7 +55,7 @@ class AVFDecomp(AVFParser):
         xpos = list(map(self.zigzag_dec, xpos))
         ypos = list(map(self.zigzag_dec, ypos))
 
-        def get_presum(arr):
+        def get_presum(arr: List[int]) -> List[int]:
             presum_arr = [arr[0]]
             presum = arr[0]
             for i in range(len(arr) - 1):
