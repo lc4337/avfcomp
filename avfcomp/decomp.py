@@ -2,7 +2,7 @@
 
 import lzma
 from lzma import LZMAFile
-from typing import List, Dict, Tuple
+from typing import List
 
 from .base import AVFParser
 
@@ -65,7 +65,7 @@ class AVFDecomp(AVFParser):
                 ypos.append(left_data[2 * left_events + left_event_cur])
                 left_event_cur += 1
             else:
-                ti, xi, yi = self.VEC_DEC_TABLE[op[i] - 5]
+                ti, xi, yi = self.VEC_DEC_TABLE[op[i]]
                 op[i] = 1
                 timestamps.append(ti)
                 xpos.append(xi)

@@ -78,9 +78,10 @@ class AVFComp(AVFParser):
         xpos_r = []
         ypos_r = []
         for i in range(num_events):
-            if op[i] == 1 and timestamps[i] <= 2 and xpos[i] <= 4 and ypos[i] <= 4:
-                op[i] = 5 + self.VEC_ENC_TABLE[(timestamps[i], xpos[i], ypos[i])]
-            else:
+            try:
+                assert op[i] == 1
+                op[i] = self.VEC_ENC_TABLE[(timestamps[i], xpos[i], ypos[i])]
+            except (KeyError, AssertionError):
                 op[i] = self.OP_ENC_TABLE[op[i]]
                 timestamps_r.append(timestamps[i])
                 xpos_r.append(xpos[i])
