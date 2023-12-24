@@ -41,13 +41,6 @@ class AVFParser:
         21: "lmb_up",
     }
 
-    LEVELS = {
-        3: "beginner",
-        4: "intermediate",
-        5: "expert",
-        6: "custom",
-    }
-
     LEVELS_STAT = [
         # (cols, rows, mines)
         (8, 8, 10),
