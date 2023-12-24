@@ -12,7 +12,6 @@ class AVFParser:
         LEVELS (dict): Dictionary mapping level numbers to their corresponding names.
         LEVELS_STAT (list): List of tuples representing the columns, rows, and mines for each level.
         version (int): Version number of the AVF file.
-        is_freesweeper (bool): Flag indicating whether the AVF file is from FreeSweeper.
         prefix (bytes): Bytes representing the prefix of the AVF file.
         level (int): Level of the game.
         cols (int): Number of columns in the game grid.
@@ -52,7 +51,6 @@ class AVFParser:
     def __init__(self):
         """Initializations for variables."""
         self.mines, self.events, self.footer = [], [], []
-        self.is_freesweeper = False
         self.version, self.level, self.cols, self.rows, self.num_mines = 0, 0, 0, 0, 0
         self.prefix, self.prestamp, self.ts_info = b"", b"", b""
         self.preevent, self.presuffix = b"", b""
@@ -107,7 +105,6 @@ class AVFParser:
         """Process the buffer data and extract information from the AVF file."""
         # version
         self.version = ord(fin.read(1))
-        self.is_freesweeper = not self.version
 
         # no idea what these bytes do
         self.prefix = fin.read(4)
@@ -161,17 +158,7 @@ class AVFParser:
                 break
             last2, last1 = last1, cur
 
-        if self.is_freesweeper:
-            for event in self.events:
-                ths = ord(fin.read(1)) & 0xF
-                event["gametime"] += ths
-
         self.presuffix += fin.read(17)
-
-        # no idea what these bytes do
-        if self.is_freesweeper:
-            while ord(fin.read(1)) != 13:
-                pass
 
         # section => extract game time from the second to last event
         self.read_footer(fin)

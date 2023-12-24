@@ -48,9 +48,7 @@ class AVFDecomp(AVFParser):
         data_cp = list(fin.read(data_len))
         data = self.varint_decompression(data_cp)
 
-        num_events = 0
-        while data[num_events] != 0:
-            num_events += 1
+        num_events = data.index(0)
 
         op = data[:num_events]
         timestamps = data[num_events + 1 : 2 * num_events + 1]
