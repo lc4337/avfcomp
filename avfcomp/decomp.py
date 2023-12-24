@@ -42,15 +42,33 @@ class AVFDecomp(AVFParser):
     def read_events(self, fin: LZMAFile):
         # Read op codes
         data_len = int.from_bytes(fin.read(3), byteorder="big")
-        data_cp = list(fin.read(data_len))
-        data = self.varint_decompression(data_cp)
+        data = list(fin.read(data_len))
 
-        num_events = data.index(0)
-
+        num_events = data.index(127)
         op = data[:num_events]
-        timestamps = data[num_events + 1 : 2 * num_events + 1]
-        xpos = data[2 * num_events + 1 : 3 * num_events + 1]
-        ypos = data[3 * num_events + 1 :]
+
+        left_data = self.varint_decompression(data[num_events + 1 :])
+        left_events = len(left_data) // 3
+        left_event_cur = 0
+
+        timestamps = []
+        xpos = []
+        ypos = []
+
+        # Read timestamps, xpos, ypos
+        for i in range(num_events):
+            if op[i] in self.OP_DEC_TABLE:
+                op[i] = self.OP_DEC_TABLE[op[i]]
+                timestamps.append(left_data[left_event_cur])
+                xpos.append(left_data[left_events + left_event_cur])
+                ypos.append(left_data[2 * left_events + left_event_cur])
+                left_event_cur += 1
+            else:
+                ti, xi, yi = self.VEC_DEC_TABLE[op[i]]
+                op[i] = 1
+                timestamps.append(ti)
+                xpos.append(xi)
+                ypos.append(yi)
 
         xpos = list(map(self.zigzag_dec, xpos))
         ypos = list(map(self.zigzag_dec, ypos))
