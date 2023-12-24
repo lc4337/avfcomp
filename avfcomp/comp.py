@@ -73,9 +73,22 @@ class AVFComp(AVFParser):
         xpos = list(map(self.zigzag_enc, xpos))
         ypos = list(map(self.zigzag_enc, ypos))
 
-        data_cc = op + [0] + timestamps + xpos + ypos
+        num_events = len(op)
+        timestamps_r = []
+        xpos_r = []
+        ypos_r = []
+        for i in range(num_events):
+            if op[i] == 1 and timestamps[i] <= 2 and xpos[i] <= 4 and ypos[i] <= 4:
+                op[i] = 5 + self.VEC_ENC_TABLE[(timestamps[i], xpos[i], ypos[i])]
+            else:
+                op[i] = self.OP_ENC_TABLE[op[i]]
+                timestamps_r.append(timestamps[i])
+                xpos_r.append(xpos[i])
+                ypos_r.append(ypos[i])
+
+        data_cc = timestamps_r + xpos_r + ypos_r
         data_cp = self.varint_compression(data_cc)
-        data = bytearray(data_cp)
+        data = bytearray(op + [127] + data_cp)
         fout.write(len(data).to_bytes(3, byteorder="big"))
         fout.write(data)
 
