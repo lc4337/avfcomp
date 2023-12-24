@@ -1,7 +1,7 @@
 """Base parser for AVF files."""
 
-from io import SEEK_CUR
-
+from io import BufferedWriter, BufferedReader, SEEK_CUR
+from typing import List, Tuple
 
 class AVFParser:
     """
@@ -40,13 +40,12 @@ class AVFParser:
         21: "lmb_up",
     }
 
-    LEVELS_STAT = [
+    LEVELS_STAT: List[Tuple[int, int, int]] = [
         # (cols, rows, mines)
         (8, 8, 10),
         (16, 16, 40),
         (30, 16, 99),
     ]
-
 
     def __init__(self):
         """Initializations for variables."""
@@ -55,14 +54,14 @@ class AVFParser:
         self.prefix, self.prestamp, self.ts_info = b"", b"", b""
         self.preevent, self.presuffix = b"", b""
 
-    def read_mines(self, fin):
+    def read_mines(self, fin: BufferedReader):
         """Write the mines to the input buffer."""
         for _ in range(self.num_mines):
             row = ord(fin.read(1))
             col = ord(fin.read(1))
             self.mines.append((row, col))
 
-    def read_events(self, fin):
+    def read_events(self, fin: BufferedReader):
         """Write the events to the input buffer."""
         self.preevent = self.preevent[:-1]
         fin.seek(-3, SEEK_CUR)
@@ -89,7 +88,7 @@ class AVFParser:
                 }
             )
 
-    def read_footer(self, fin):
+    def read_footer(self, fin: BufferedReader):
         """Write the footer to the input buffer."""
         footer_raw = fin.read()
         footer_list = footer_raw.split(b"\r")
@@ -101,7 +100,7 @@ class AVFParser:
 
         self.footer = [skin_v, idt, abt_v]
 
-    def read_data(self, fin):
+    def read_data(self, fin: BufferedReader):
         """Process the buffer data and extract information from the AVF file."""
         # version
         self.version = ord(fin.read(1))
@@ -163,18 +162,18 @@ class AVFParser:
         # section => extract game time from the second to last event
         self.read_footer(fin)
 
-    def process_in(self, filename):
+    def process_in(self, filename: str):
         """Process the AVF file and parse the data to memory."""
         with open(filename, "rb") as fin:
             self.read_data(fin)
 
-    def write_mines(self, fout):
+    def write_mines(self, fout: BufferedWriter):
         """Write the mines to the output buffer."""
         for mine in self.mines:
             fout.write(mine[0].to_bytes(1, byteorder="big"))
             fout.write(mine[1].to_bytes(1, byteorder="big"))
 
-    def write_events(self, fout):
+    def write_events(self, fout: BufferedWriter):
         """Write the events to the output buffer."""
         for event in self.events:
             mouse = event["type"]
@@ -193,7 +192,7 @@ class AVFParser:
             fout.write((sec >> 8).to_bytes(1, byteorder="big"))
             fout.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
 
-    def write_footer(self, fout):
+    def write_footer(self, fout: BufferedWriter):
         """Write the footer to the output buffer."""
         rtime = (
             str(self.events[-1]["gametime"] // 1000).encode("cp1252")
@@ -210,7 +209,7 @@ class AVFParser:
         footer_raw = b"\r".join([rtime_raw, skin_raw, idt_raw, abt_raw])
         fout.write(footer_raw)
 
-    def write_data(self, fout):
+    def write_data(self, fout: BufferedWriter):
         """Write the data to the output buffer."""
         fout.write(self.version.to_bytes(1, byteorder="big"))
 
@@ -236,7 +235,7 @@ class AVFParser:
 
         self.write_footer(fout)
 
-    def process_out(self, filename):
+    def process_out(self, filename: str):
         """Process the AVF file and write the output to a file."""
         with open(filename, "wb") as fout:
             self.write_data(fout)

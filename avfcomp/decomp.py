@@ -1,6 +1,8 @@
 """Decompression of an AVF file."""
 
 import lzma
+from lzma import LZMAFile
+from typing import List
 
 from .base import AVFParser
 
@@ -9,12 +11,12 @@ class AVFDecomp(AVFParser):
     """Decompression of an AVF file."""
 
     @staticmethod
-    def zigzag_dec(n):
+    def zigzag_dec(n: int) -> int:
         """Zigzag transformation decode."""
         return (n >> 1) ^ -(n & 1)
 
     @staticmethod
-    def varint_decompression(data):
+    def varint_decompression(data: List[int]) -> List[int]:
         """Variable-length integer decompression."""
 
         res = []
@@ -33,16 +35,11 @@ class AVFDecomp(AVFParser):
 
         return res
 
-    def process_in(self, filename):
+    def process_in(self, filename: str):
         with lzma.open(filename, "rb") as fin:
             self.read_data(fin)
 
-    def read_events(self, fin):
-        op = []
-        timestamps = []
-        xpos = []
-        ypos = []
-
+    def read_events(self, fin: LZMAFile):
         # Read op codes
         data_len = int.from_bytes(fin.read(3), byteorder="big")
         data_cp = list(fin.read(data_len))
@@ -80,7 +77,7 @@ class AVFDecomp(AVFParser):
             }
             self.events.append(event)
 
-    def read_mines(self, fin):
+    def read_mines(self, fin: LZMAFile):
         cols, rows = self.cols, self.rows
         size = (rows * cols + 7) // 8
         data = fin.read(size)
@@ -94,6 +91,6 @@ class AVFDecomp(AVFParser):
                     mine = (j + 1, i + 1)
                     self.mines.append(mine)
 
-    def read_footer(self, fin):
+    def read_footer(self, fin: LZMAFile):
         footer_simp = fin.read()
         self.footer = footer_simp.split(b"\r")
