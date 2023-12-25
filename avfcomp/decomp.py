@@ -16,18 +16,19 @@ class AVFDecomp(AVFParser):
         return (n >> 1) ^ -(n & 1)
 
     @staticmethod
-    def varint_decompression(data: List[int]) -> List[int]:
+    def varint_decompression(data: bytes) -> List[int]:
         """Variable-length integer decompression."""
 
         res = []
         cur = 0
-        while cur < len(data):
-            if data[cur] >> 7 == 0:  # stands for 1-byte storage
+        len_data = len(data)
+        while cur < len_data:
+            if (data[cur] >> 7) == 0:  # stands for 1-byte storage
                 res.append(data[cur])
                 cur += 1
 
-            elif cur + 1 < len(data):  # stands for 2-byte storage
-                res.append(data[cur + 1] + ((data[cur] & 0x7F) << 8))
+            elif cur + 1 < len_data:  # stands for 2-byte storage
+                res.append(((data[cur] & 0x7F) << 8) | data[cur + 1])
                 cur += 2
 
             else:
@@ -42,10 +43,10 @@ class AVFDecomp(AVFParser):
     def read_events(self, fin: LZMAFile):
         # Read op codes
         data_len = int.from_bytes(fin.read(3), byteorder="big")
-        data = list(fin.read(data_len))
+        data = fin.read(data_len)
 
         num_events = data.index(127)
-        op = data[:num_events]
+        op = list(data[:num_events])
 
         left_data = self.varint_decompression(data[num_events + 1 :])
         left_events = len(left_data) // 3

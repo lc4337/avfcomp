@@ -16,7 +16,7 @@ class AVFComp(AVFParser):
         return (n << 1) ^ (n >> 31)
 
     @staticmethod
-    def varint_compression(data: List[int]) -> List[int]:
+    def varint_compression(data: List[int]) -> bytes:
         """
         Variable-length integer compression.
 
@@ -25,17 +25,13 @@ class AVFComp(AVFParser):
         1 0000000 00000000: 2-byte storage.
         """
 
-        res = []
-        cur = 0
-        while cur < len(data):
-            if data[cur] < 128:  # 1-byte storage
-                res.append(data[cur])
-                cur += 1
+        res = b""
+        for cur in data:
+            if cur < 0x80:  # 1-byte storage
+                res += cur.to_bytes(1, byteorder="big")
 
-            elif data[cur] < 32768:
-                res.append(128 + (data[cur] >> 8))  # 2-byte storage, high bits
-                res.append(data[cur] & 0xFF)  # 2-byte storage, low bits
-                cur += 1
+            elif cur < 0x8000:
+                res += (cur | 0x8000).to_bytes(2, byteorder="big")  # 2-byte storage, high bits
 
             else:
                 raise ValueError("Integer too large.")
@@ -78,18 +74,20 @@ class AVFComp(AVFParser):
         xpos_r = []
         ypos_r = []
         for i in range(num_events):
-            try:
-                assert op[i] == 1
-                op[i] = self.VEC_ENC_TABLE[(timestamps[i], xpos[i], ypos[i])]
-            except (KeyError, AssertionError):
+            vec_enc = None
+            if op[i] == 1:
+                vec = (timestamps[i], xpos[i], ypos[i])
+                vec_enc = self.VEC_ENC_TABLE.get(vec)
+                op[i] = vec_enc if vec_enc is not None else 1
+
+            if vec_enc is None:
                 op[i] = self.OP_ENC_TABLE[op[i]]
                 timestamps_r.append(timestamps[i])
                 xpos_r.append(xpos[i])
                 ypos_r.append(ypos[i])
 
-        data_cc = timestamps_r + xpos_r + ypos_r
-        data_cp = self.varint_compression(data_cc)
-        data = bytearray(op + [127] + data_cp)
+        data_r = timestamps_r + xpos_r + ypos_r
+        data = bytes(op) + b"\x7f" + self.varint_compression(data_r)
         fout.write(len(data).to_bytes(3, byteorder="big"))
         fout.write(data)
 
