@@ -73,6 +73,7 @@ class AVFComp(AVFParser):
         timestamps_r = []
         xpos_r = []
         ypos_r = []
+        self._AL += num_events
         for i in range(num_events):
             vec_enc = None
             if op[i] == 1:
@@ -81,6 +82,7 @@ class AVFComp(AVFParser):
                 op[i] = vec_enc if vec_enc is not None else 1
 
             if vec_enc is None:
+                self._UM += 1
                 op[i] = self.OP_ENC_TABLE[op[i]]
                 timestamps_r.append(timestamps[i])
                 xpos_r.append(xpos[i])

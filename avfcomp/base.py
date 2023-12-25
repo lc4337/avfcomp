@@ -147,6 +147,8 @@ class AVFParser:
 
     def __init__(self):
         """Initializations for variables."""
+        self._AL: int = 0
+        self._UM: int = 0
         self.mines: List[Tuple[int, int]] = []
         self.events: List[Dict[str, int]] = []
         self.footer: List[bytes] = []
@@ -156,6 +158,7 @@ class AVFParser:
 
     def read_mines(self, fin: Union[BufferedReader, LZMAFile]):
         """Write the mines to the input buffer."""
+        self.mines = []
         for _ in range(self.num_mines):
             row = ord(fin.read(1))
             col = ord(fin.read(1))
@@ -163,8 +166,9 @@ class AVFParser:
 
     def read_events(self, fin: Union[BufferedReader, LZMAFile]):
         """Write the events to the input buffer."""
-        self.preevent = self.preevent[:-1]
         fin.seek(-3, SEEK_CUR)
+        self.preevent = self.preevent[:-1]
+        self.events = []
 
         while True:
             buffer = fin.read(8)
@@ -175,7 +179,7 @@ class AVFParser:
             gametime = 1000 * sec + 10 * hun
 
             if sec < 0:
-                self.presuffix += buffer
+                fin.seek(-8, SEEK_CUR)
                 break
 
             assert mouse in self.MOUSE_EVENT_TYPES
@@ -218,18 +222,21 @@ class AVFParser:
 
         self.read_mines(fin)
 
+        self.prestamp = b""
         while True:
             char = fin.read(1)
             if char == b"[":
                 break
             self.prestamp += char
 
+        self.ts_info = b""
         while True:
             char = fin.read(1)
             if char == b"]":
                 break
             self.ts_info += char
 
+        # read preevent
         self.preevent = fin.read(1)
         last = ord(self.preevent)
         while True:
@@ -239,13 +246,12 @@ class AVFParser:
                 break
             last = cur
             self.preevent += char
-
         self.preevent = self.preevent[:-1]
 
         self.read_events(fin)
 
         buffer = fin.read(2)
-        self.presuffix += buffer
+        self.presuffix = buffer
         last2, last1 = buffer
         ref = tuple(b"cs=")
         while True:
@@ -255,7 +261,6 @@ class AVFParser:
             if (last2, last1, cur) == ref:
                 break
             last2, last1 = last1, cur
-
         self.presuffix += fin.read(17)
 
         # section => extract game time from the second to last event

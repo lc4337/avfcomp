@@ -15,7 +15,8 @@ int_path = path.join(data_path, "avf_int")
 exp_path = path.join(data_path, "avf_exp")
 cvf_path = path.join(data_path, "cvf")
 decomp_path = path.join(data_path, "avf_decomp")
-
+_event_num = 0
+_unmatch_num = 0
 
 def list_files(paths):
     for file in listdir(paths):
@@ -46,21 +47,29 @@ def cost_time(func):
 def get_comp(paths):
     rawsize = 0
     compsize = 0
+    cvf = AVFComp()
+    # num = len(list(list_files(paths)))
+    # cnt = 1
+    global _event_num, _unmatch_num
     for name, file_path in list_files(paths):
+        # print(f"{cnt}/{num}: {name}", end="\r")
+        # cnt += 1
         rawsize += path.getsize(file_path)
-        cvf = AVFComp()
         cvf.process_in(file_path)
         comp = path.join(cvf_path, name.replace("avf", "cvf"))
         cvf.process_out(comp)
         compsize += path.getsize(comp)
+    _event_num += cvf._AL
+    _unmatch_num += cvf._UM
+    print((_event_num - _unmatch_num) / _event_num)
     return (compsize, rawsize)
 
 
 @cost_time
 def get_decomp(paths):
     decompsize = 0
+    cvf = AVFDecomp()
     for name, file_path in list_files(paths):
-        cvf = AVFDecomp()
         cvf.process_in(file_path)
         decompsize += path.getsize(file_path)
         decomp = path.join(decomp_path, name.replace("cvf", "avf"))
