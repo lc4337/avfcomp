@@ -313,8 +313,6 @@ class AVFParser:
 
     def __init__(self):
         """Initializations for variables."""
-        self._AL: int = 0
-        self._MA: int = 0
         self.mines: List[Tuple[int, int]] = []
         self.events: List[Dict[str, int]] = []
         self.footer: List[bytes] = []

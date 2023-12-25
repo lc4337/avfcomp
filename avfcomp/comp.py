@@ -73,12 +73,10 @@ class AVFComp(AVFParser):
         timestamps_r = []
         xpos_r = []
         ypos_r = []
-        self._AL += num_events
         for i in range(num_events):
             key = (op[i], timestamps[i], xpos[i], ypos[i])
             enc = self.VEC_ENC_TABLE.get(key)
             if enc is not None:
-                self._MA += 1
                 op[i] = enc
 
             else:
@@ -88,7 +86,7 @@ class AVFComp(AVFParser):
                 ypos_r.append(ypos[i])
 
         data_r = timestamps_r + xpos_r + ypos_r
-        data = bytes(op) + b"0xFF" + self.varint_compression(data_r)
+        data = bytes(op) + b"\xff" + self.varint_compression(data_r)
         fout.write(len(data).to_bytes(3, byteorder="big"))
         fout.write(data)
 

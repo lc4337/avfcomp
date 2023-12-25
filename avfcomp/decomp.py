@@ -45,7 +45,7 @@ class AVFDecomp(AVFParser):
         data_len = int.from_bytes(fin.read(3), byteorder="big")
         data = fin.read(data_len)
 
-        num_events = data.index(b"0xFF")
+        num_events = data.index(b"\xff")
         op = list(data[:num_events])
 
         left_data = self.varint_decompression(data[num_events + 1 :])
