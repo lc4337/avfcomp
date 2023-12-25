@@ -78,10 +78,10 @@ class AVFComp(AVFParser):
         xpos_r = []
         ypos_r = []
         for i in range(num_events):
+            key = (op[i], timestamps[i], xpos[i], ypos[i])
             try:
-                assert op[i] == 1
-                op[i] = self.VEC_ENC_TABLE[(timestamps[i], xpos[i], ypos[i])]
-            except (KeyError, AssertionError):
+                op[i] = self.VEC_ENC_TABLE[key]
+            except KeyError:
                 op[i] = self.OP_ENC_TABLE[op[i]]
                 timestamps_r.append(timestamps[i])
                 xpos_r.append(xpos[i])
@@ -89,7 +89,7 @@ class AVFComp(AVFParser):
 
         data_cc = timestamps_r + xpos_r + ypos_r
         data_cp = self.varint_compression(data_cc)
-        data = bytearray(op + [127] + data_cp)
+        data = bytearray(op + [255] + data_cp)
         fout.write(len(data).to_bytes(3, byteorder="big"))
         fout.write(data)
 
