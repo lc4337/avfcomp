@@ -1,7 +1,9 @@
 import hashlib
 import sys
 import time
-from os import listdir, path
+import shutil
+from os import listdir, path, mkdir
+
 
 work_dir = path.dirname(path.dirname(__file__))
 sys.path.insert(0, work_dir)
@@ -17,6 +19,11 @@ cvf_path = path.join(data_path, "cvf")
 decomp_path = path.join(data_path, "avf_decomp")
 _event_num = 0
 _unmatch_num = 0
+# refresh
+shutil.rmtree(cvf_path, ignore_errors=True)
+shutil.rmtree(decomp_path, ignore_errors=True)
+mkdir(cvf_path)
+mkdir(decomp_path)
 
 def list_files(paths):
     for file in listdir(paths):
