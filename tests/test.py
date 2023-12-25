@@ -1,15 +1,16 @@
+"""Test compression and decompression."""
+
+import unittest
+
 import hashlib
-import sys
 import time
 import shutil
 from os import listdir, path, mkdir
-
-
-work_dir = path.dirname(path.dirname(__file__))
-sys.path.insert(0, work_dir)
-
+from typing import Iterator, Tuple, Callable, Any
 
 from avfcomp import AVFComp, AVFDecomp
+
+work_dir = path.dirname(path.dirname(__file__))
 
 data_path = path.join(work_dir, "data")
 beg_path = path.join(data_path, "avf_beg")
@@ -24,24 +25,23 @@ shutil.rmtree(decomp_path, ignore_errors=True)
 mkdir(cvf_path)
 mkdir(decomp_path)
 
-def list_files(paths):
+
+def list_files(paths: str) -> Iterator[Tuple[str, str]]:
+    """List all files in a directory."""
     for file in listdir(paths):
         yield file, path.join(paths, file)
 
 
 def calc_file_hash(file_path):
+    """Calculate the hash of a file."""
     with open(file_path, "rb") as fin:
         return hashlib.sha256(fin.read()).hexdigest()
 
 
-def is_same(file1_path, file2_path):
-    file1_hash = calc_file_hash(file1_path)
-    file2_hash = calc_file_hash(file2_path)
-    return file1_hash == file2_hash
+def cost_time(func: Callable) -> Callable[..., Tuple[Any, float]]:
+    """Calculate the time cost of a function."""
 
-
-def cost_time(func):
-    def fun(*args, **kwargs):
+    def fun(*args, **kwargs) -> Tuple[Any, float]:
         t = time.perf_counter()
         result = func(*args, **kwargs)
         return (result, time.perf_counter() - t)
@@ -50,7 +50,8 @@ def cost_time(func):
 
 
 @cost_time
-def get_comp(paths):
+def get_comp(paths: str) -> Tuple[int, int]:
+    """Compress all files."""
     rawsize = 0
     compsize = 0
     cvf = AVFComp()
@@ -64,7 +65,8 @@ def get_comp(paths):
 
 
 @cost_time
-def get_decomp(paths):
+def get_decomp(paths: str) -> int:
+    """Decompress all files."""
     decompsize = 0
     cvf = AVFDecomp()
     for name, file_path in list_files(paths):
@@ -75,7 +77,8 @@ def get_decomp(paths):
     return decompsize
 
 
-def test_comp(paths, mode=""):
+def stat_comp(paths: str, mode: str = ""):
+    """Get the statistics of compressed files."""
     size, ctime = get_comp(paths)
     compsize, rawsize = size
     ratio = 100 * (compsize / rawsize)
@@ -83,42 +86,36 @@ def test_comp(paths, mode=""):
     print(f"{mode}: {ratio:.2f}% {speed:.2f} MB/s")
 
 
-def test_decomp(paths):
+def stat_decomp(paths: str):
+    """Get the statistics of decompressed files."""
     size, dtime = get_decomp(paths)
     speed = (size / dtime) / 1024 / 1024
     print(f"{speed:.2f} MB/s")
 
 
-def check_decomp():
-    for name, file_path in list_files(beg_path):
-        decomp = path.join(decomp_path, name)
-        if not is_same(file_path, decomp):
-            print(file_path, decomp)
-            raise Exception("CHECK FAILED")
+class TestCompAndDecomp(unittest.TestCase):
+    """Test compression and decompression."""
 
-    for name, file_path in list_files(int_path):
-        decomp = path.join(decomp_path, name)
-        if not is_same(file_path, decomp):
-            raise Exception("CHECK FAILED")
+    def check_decomp(self, paths: str):
+        """Check the decompressed files."""
+        for name, file_path in list_files(paths):
+            decomp = path.join(decomp_path, name)
+            self.assertEqual(calc_file_hash(file_path), calc_file_hash(decomp))
 
-    for name, file_path in list_files(exp_path):
-        decomp = path.join(decomp_path, name)
-        if not is_same(file_path, decomp):
-            raise Exception("CHECK FAILED")
+    def test_comp_and_decomp(self):
+        """Test compression and decompression."""
+        print("Test compression: ")
+        stat_comp(beg_path, "beg")
+        stat_comp(int_path, "int")
+        stat_comp(exp_path, "exp")
 
-    print("ALL FILE CHECK PASSED")
+        print("Test decompression: ")
+        stat_decomp(cvf_path)
 
-
-def main():
-    print("Test compression: ")
-    test_comp(beg_path, "beg")
-    test_comp(int_path, "int")
-    test_comp(exp_path, "exp")
-
-    print("Test decompression: ")
-    test_decomp(cvf_path)
-    check_decomp()
+        self.check_decomp(beg_path)
+        self.check_decomp(int_path)
+        self.check_decomp(exp_path)
 
 
 if __name__ == "__main__":
-    main()
+    unittest.main()
