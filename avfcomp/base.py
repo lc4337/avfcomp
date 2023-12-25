@@ -319,8 +319,6 @@ class AVFParser:
         self.version, self.level, self.cols, self.rows, self.num_mines = 0, 0, 0, 0, 0
         self.prefix, self.prestamp, self.ts_info = b"", b"", b""
         self.preevent, self.presuffix = b"", b""
-        self.op_dict = {}
-        self.op_dict_others = {}
 
     def read_mines(self, fin: Union[BufferedReader, LZMAFile]):
         """Write the mines to the input buffer."""
