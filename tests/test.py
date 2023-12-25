@@ -18,12 +18,12 @@ exp_path = path.join(data_path, "avf_exp")
 cvf_path = path.join(data_path, "cvf")
 decomp_path = path.join(data_path, "avf_decomp")
 _event_num = 0
-_unmatch_num = 0
+_match_num = 0
 # refresh
-shutil.rmtree(cvf_path, ignore_errors=True)
-shutil.rmtree(decomp_path, ignore_errors=True)
-mkdir(cvf_path)
-mkdir(decomp_path)
+# shutil.rmtree(cvf_path, ignore_errors=True)
+# shutil.rmtree(decomp_path, ignore_errors=True)
+# mkdir(cvf_path)
+# mkdir(decomp_path)
 
 def list_files(paths):
     for file in listdir(paths):
@@ -57,7 +57,7 @@ def get_comp(paths):
     cvf = AVFComp()
     # num = len(list(list_files(paths)))
     # cnt = 1
-    global _event_num, _unmatch_num
+    global _event_num, _match_num
     for name, file_path in list_files(paths):
         # print(f"{cnt}/{num}: {name}", end="\r")
         # cnt += 1
@@ -67,8 +67,8 @@ def get_comp(paths):
         cvf.process_out(comp)
         compsize += path.getsize(comp)
     _event_num += cvf._AL
-    _unmatch_num += cvf._UM
-    print((_event_num - _unmatch_num) / _event_num)
+    _match_num += cvf._MA
+    print(_match_num / _event_num)
     return (compsize, rawsize)
 
 
@@ -79,6 +79,7 @@ def get_decomp(paths):
     for name, file_path in list_files(paths):
         cvf.process_in(file_path)
         decompsize += path.getsize(file_path)
+        print(cvf.events)
         decomp = path.join(decomp_path, name.replace("cvf", "avf"))
         cvf.process_out(decomp)
     return decompsize
@@ -119,10 +120,10 @@ def check_decomp():
 
 
 def main():
-    print("Test compression: ")
-    test_comp(beg_path, "beg")
-    test_comp(int_path, "int")
-    test_comp(exp_path, "exp")
+    # print("Test compression: ")
+    # test_comp(beg_path, "beg")
+    # test_comp(int_path, "int")
+    # test_comp(exp_path, "exp")
 
     print("Test decompression: ")
     test_decomp(cvf_path)
