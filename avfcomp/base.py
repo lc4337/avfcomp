@@ -4,6 +4,8 @@ from io import BufferedWriter, BufferedReader, SEEK_CUR
 from lzma import LZMAFile
 from typing import List, Dict, Tuple, Union
 
+from . import config
+
 
 class AVFParser:
     """
@@ -28,14 +30,12 @@ class AVFParser:
         footer (bytes): Bytes representing the footer of the AVF file.
     """
 
-    from .config import (
-        MOUSE_EVENT_TYPES,
-        LEVELS_STAT,
-        OP_ENC_TABLE,
-        OP_DEC_TABLE,
-        VEC_ENC_TABLE,
-        VEC_DEC_TABLE,
-    )
+    MOUSE_EVENT_TYPES = config.MOUSE_EVENT_TYPES
+    LEVELS_STAT = config.LEVELS_STAT
+    OP_ENC_TABLE = config.OP_ENC_TABLE
+    OP_DEC_TABLE = config.OP_DEC_TABLE
+    VEC_ENC_TABLE = config.VEC_ENC_TABLE
+    VEC_DEC_TABLE = config.VEC_DEC_TABLE
 
     def __init__(self):
         """Initializations for variables."""

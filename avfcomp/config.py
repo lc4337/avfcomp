@@ -1,6 +1,8 @@
+"""Configuration for the package."""
+
 from typing import List, Dict, Tuple
 
-MOUSE_EVENT_TYPES = {
+MOUSE_EVENT_TYPES: Dict[int, str] = {
     1: "move",
     3: "lmb_down",
     5: "lmb_up",
