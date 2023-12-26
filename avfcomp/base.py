@@ -4,7 +4,7 @@ from io import SEEK_CUR
 from typing import Dict, List, Tuple
 
 from . import config
-from .basecomp import CompType, T_CompFile, T_CompType, copen
+from .comptype import T_CompFile
 
 
 class AVFParser:
@@ -46,52 +46,15 @@ class AVFParser:
         self.prefix, self.prestamp, self.ts_info = b"", b"", b""
         self.preevent, self.presuffix = b"", b""
 
-    def read_mines(self, fin: T_CompFile):
-        """Write the mines to the input buffer."""
-        self.mines = []
-        for _ in range(self.num_mines):
-            row = ord(fin.read(1))
-            col = ord(fin.read(1))
-            self.mines.append((row, col))
+    def process_in(self, filename: str):
+        """Process the AVF file and parse the data to memory."""
+        with open(filename, "rb") as fin:
+            self.read_data(fin)
 
-    def read_events(self, fin: T_CompFile):
-        """Write the events to the input buffer."""
-        fin.seek(-3, SEEK_CUR)
-        self.preevent = self.preevent[:-1]
-        self.events = []
-
-        while True:
-            buffer = fin.read(8)
-            mouse, x1, s2, x2, hun, y1, s1, y2 = tuple(buffer)
-            xpos = (x1 << 8) + x2
-            ypos = (y1 << 8) + y2
-            sec = (s1 << 8) + s2 - 1
-            gametime = 1000 * sec + 10 * hun
-
-            if sec < 0:
-                fin.seek(-8, SEEK_CUR)
-                break
-
-            assert mouse in self.MOUSE_EVENT_TYPES
-
-            self.events.append(
-                {
-                    "type": mouse,
-                    "gametime": gametime,
-                    "xpos": xpos,
-                    "ypos": ypos,
-                }
-            )
-
-    def read_footer(self, fin: T_CompFile):
-        """Write the footer to the input buffer."""
-        footer_raw = fin.read()
-        footer_list = footer_raw.split(b"\r")
-        skin_v = footer_list[1][footer_list[1].find(b"Skin: ") + 6 :]
-        idt = footer_list[2]
-        abt_v = footer_list[3][footer_list[3].find(b"Arbiter") + 8 : footer_list[3].find(b"Copyright") - 2]
-
-        self.footer = [skin_v, idt, abt_v]
+    def process_out(self, filename: str):
+        """Process the AVF file and write the output to a file."""
+        with open(filename, "wb") as fout:
+            self.write_data(fout)
 
     def read_data(self, fin: T_CompFile):
         """Process the buffer data and extract information from the AVF file."""
@@ -153,13 +116,80 @@ class AVFParser:
             last2, last1 = last1, cur
         self.presuffix += fin.read(17)
 
-        # section => extract game time from the second to last event
         self.read_footer(fin)
 
-    def process_in(self, filename: str, in_type: T_CompType = CompType.PLAIN):
-        """Process the AVF file and parse the data to memory."""
-        with copen(filename, "rb", _type=in_type) as fin:
-            self.read_data(fin)
+    def write_data(self, fout: T_CompFile):
+        """Write the data to the output buffer."""
+        fout.write(self.version.to_bytes(1, byteorder="big"))
+
+        fout.write(self.prefix)
+
+        fout.write(self.level.to_bytes(1, byteorder="big"))
+        if self.level == 6:
+            fout.write((self.cols - 1).to_bytes(1, byteorder="big"))
+            fout.write((self.rows - 1).to_bytes(1, byteorder="big"))
+            fout.write(self.num_mines.to_bytes(2, byteorder="big"))
+
+        self.write_mines(fout)
+
+        fout.write(self.prestamp)
+
+        fout.write(b"[%s]" % self.ts_info)
+
+        fout.write(self.preevent)
+
+        self.write_events(fout)
+
+        fout.write(self.presuffix)
+
+        self.write_footer(fout)
+
+    def read_mines(self, fin: T_CompFile):
+        """Write the mines to the input buffer."""
+        self.mines = []
+        for _ in range(self.num_mines):
+            row = ord(fin.read(1))
+            col = ord(fin.read(1))
+            self.mines.append((row, col))
+
+    def read_events(self, fin: T_CompFile):
+        """Write the events to the input buffer."""
+        fin.seek(-3, SEEK_CUR)
+        self.preevent = self.preevent[:-1]
+        self.events = []
+
+        while True:
+            buffer = fin.read(8)
+            mouse, x1, s2, x2, hun, y1, s1, y2 = tuple(buffer)
+            xpos = (x1 << 8) + x2
+            ypos = (y1 << 8) + y2
+            sec = (s1 << 8) + s2 - 1
+            gametime = 1000 * sec + 10 * hun
+
+            if sec < 0:
+                fin.seek(-8, SEEK_CUR)
+                break
+
+            assert mouse in self.MOUSE_EVENT_TYPES
+
+            self.events.append(
+                {
+                    "type": mouse,
+                    "gametime": gametime,
+                    "xpos": xpos,
+                    "ypos": ypos,
+                }
+            )
+
+    def read_footer(self, fin: T_CompFile):
+        """Write the footer to the input buffer."""
+        footer_raw = fin.read()
+        footer_list = footer_raw.split(b"\r")
+        skin_v = footer_list[1][footer_list[1].find(b"Skin: ") + 6 :]
+        idt = footer_list[2]
+        abt_v = footer_list[3][footer_list[3].find(b"Arbiter") + 8 : footer_list[3].find(b"Copyright") - 2]
+
+        self.footer = [skin_v, idt, abt_v]
 
     def write_mines(self, fout: T_CompFile):
         """Write the mines to the output buffer."""
@@ -196,34 +226,3 @@ class AVFParser:
 
         footer_raw = b"\r".join([rtime_raw, skin_raw, idt_raw, abt_raw])
         fout.write(footer_raw)
-
-    def write_data(self, fout: T_CompFile):
-        """Write the data to the output buffer."""
-        fout.write(self.version.to_bytes(1, byteorder="big"))
-
-        fout.write(self.prefix)
-
-        fout.write(self.level.to_bytes(1, byteorder="big"))
-        if self.level == 6:
-            fout.write((self.cols - 1).to_bytes(1, byteorder="big"))
-            fout.write((self.rows - 1).to_bytes(1, byteorder="big"))
-            fout.write(self.num_mines.to_bytes(2, byteorder="big"))
-
-        self.write_mines(fout)
-
-        fout.write(self.prestamp)
-
-        fout.write(b"[%s]" % self.ts_info)
-
-        fout.write(self.preevent)
-
-        self.write_events(fout)
-
-        fout.write(self.presuffix)
-
-        self.write_footer(fout)
-
-    def process_out(self, filename: str, out_type: T_CompType = CompType.PLAIN):
-        """Process the AVF file and write the output to a file."""
-        with copen(filename, "wb", out_type) as fout:
-            self.write_data(fout)

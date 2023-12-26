@@ -1,14 +1,14 @@
 """Test compression and decompression."""
 
-import hashlib
-import shutil
 import time
+import shutil
+import hashlib
 import unittest
-from os import listdir, mkdir, path
-from typing import Any, Callable, Iterator, Tuple
+from os import path, mkdir, listdir
+from typing import Any, Tuple, Callable, Iterator
 
-from avfcomp import AVFComp, AVFDecomp, CompType
-from avfcomp.basecomp import T_CompType
+from avfcomp.comptype import T_CompType
+from avfcomp import AVFComp, CompType, AVFDecomp
 
 work_dir = path.dirname(path.dirname(__file__))
 
@@ -57,12 +57,12 @@ def get_comp(paths: str, method: T_CompType) -> Tuple[int, int]:
     """Compress all files."""
     rawsize = 0
     compsize = 0
-    cvf = AVFComp()
+    cvf = AVFComp(method)
     for name, file_path in list_files(paths):
         rawsize += path.getsize(file_path)
         cvf.process_in(file_path)
         comp = path.join(cvf_path, name.replace("avf", "cvf"))
-        cvf.process_out(comp, method)
+        cvf.process_out(comp)
         compsize += path.getsize(comp)
     return (compsize, rawsize)
 
@@ -72,9 +72,9 @@ def get_decomp(paths: str, method: T_CompType) -> Tuple[int, int]:
     """Decompress all files."""
     decompsize_in = 0
     decompsize_out = 0
-    cvf = AVFDecomp()
+    cvf = AVFDecomp(method)
     for name, file_path in list_files(paths):
-        cvf.process_in(file_path, method)
+        cvf.process_in(file_path)
         decompsize_in += path.getsize(file_path)
         decomp = path.join(decomp_path, name.replace("cvf", "avf"))
         cvf.process_out(decomp)

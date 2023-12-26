@@ -1,8 +1,7 @@
 """Initialization for avfcomp package."""
 
-__all__ = ['AVFParser', 'AVFComp', 'AVFDecomp', 'CompType']
+__all__ = ["AVFComp", "AVFDecomp", "T_CompType", "CompType"]
 
-from .base import AVFParser
-from .basecomp import CompType
 from .comp import AVFComp
 from .decomp import AVFDecomp
+from .comptype import CompType, T_CompType

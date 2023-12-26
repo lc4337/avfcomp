@@ -1,9 +1,9 @@
 """Compression of an AVF file."""
 
-from typing import List
-from lzma import LZMAFile
+from typing import List, Callable
 
 from .base import AVFParser
+from .comptype import CompType, T_CompFile, T_CompType, get_copen
 
 
 class AVFComp(AVFParser):
@@ -36,6 +36,15 @@ class AVFComp(AVFParser):
                 raise ValueError("Integer too large.")
 
         return res
+
+    def __init__(self, comptype: T_CompType = CompType.LZMA):
+        super().__init__()
+        self.copen: Callable[..., T_CompFile] = get_copen(comptype)
+
+    def process_out(self, filename: str):
+        """write the output to a CVF file."""
+        with self.copen(filename, "wb") as fout:
+            self.write_data(fout)
 
     def write_events(self, fout):
         fout.write(b"\x00\x01")

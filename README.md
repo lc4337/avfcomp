@@ -2,46 +2,28 @@
 
 ## 使用说明
 
-如果需要预处理数据直接压缩, 需要写下面的代码:
-
 ```python
 from avfcomp import AVFComp, AVFDecomp, CompType
 
 # compress
 path = "your/path/raw.avf"
-cvf = AVFComp()
-cvf.process_in(path)
-cvf.process_out("comp.cvf", CompType.LZMA)
+# choose from plain, gzip, bzip2, lzma(default)
+Compressor = AVFComp(comptype=CompType.LZMA)
+Compressor.process_in(path)
+Compressor.process_out("comp.cvf")
 
 # decompress
 path = "your/path/comp.cvf"
-avf = AVFDecomp()
-avf.process_in(path, CompType.LZMA)
-avf.process_out("raw.avf")
-```
-
-如果不需要预处理数据直接压缩, 就只需要写下面的代码:
-
-```python
-from avfcomp import AVFParser, CompType
-
-# compress
-path = "your/path/raw.avf"
-cvf = AVFParser()
-cvf.process_in(path)
-cvf.process_out("comp.cvf", CompType.LZMA)
-
-# decompress
-path = "your/path/comp.cvf"
-avf = AVFParser()
-avf.process_in(path, CompType.LZMA)
-avf.process_out("raw.avf")
+# choose from plain, gzip, bzip2, lzma(default)
+Decompressor = AVFDecomp(comptype=CompType.LZMA)
+Decompressor.process_in(path)
+Decompressor.process_out("raw.avf")
 ```
 
 ## 格式说明 (目前支持 Arbiter 0.52+)
 
-- 基于事件先进行一轮压缩（此时压缩率能够达到85%左右）
-- 支持 gzip, bzip2, lzma 二次压缩, ~~也支持啥也不干~~
+- 对录像先进行一轮预压缩（此时压缩率能够达到15%左右）
+- 可选 gzip, bzip2, lzma 二次压缩，默认采用 lzma 进行二次压缩（此时压缩率接近8%）
 - 1字节: 大版本号
 - 4字节: `prefix`
 - 1字节: 模式
