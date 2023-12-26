@@ -1,8 +1,8 @@
 """Base parser for AVF files."""
 
-from io import BufferedWriter, BufferedReader, SEEK_CUR
 from lzma import LZMAFile
-from typing import List, Dict, Tuple, Union
+from typing import Dict, List, Tuple, Union
+from io import SEEK_CUR, BufferedReader, BufferedWriter
 
 
 class AVFParser:
@@ -29,12 +29,12 @@ class AVFParser:
     """
 
     from .config import (
-        MOUSE_EVENT_TYPES,
         LEVELS_STAT,
-        OP_ENC_TABLE,
         OP_DEC_TABLE,
-        VEC_ENC_TABLE,
+        OP_ENC_TABLE,
         VEC_DEC_TABLE,
+        VEC_ENC_TABLE,
+        MOUSE_EVENT_TYPES,
     )
 
     def __init__(self):

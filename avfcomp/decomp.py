@@ -1,8 +1,8 @@
 """Decompression of an AVF file."""
 
 import lzma
-from lzma import LZMAFile
 from typing import List
+from lzma import LZMAFile
 
 from .base import AVFParser
 
