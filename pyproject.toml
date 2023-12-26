@@ -43,3 +43,4 @@ typeCheckingMode = "basic"
 
 [tool.pylint]
 max-line-length = 110
+disable = ["invalid-name", "unspecified-encoding"]
