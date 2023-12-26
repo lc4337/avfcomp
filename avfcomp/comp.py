@@ -1,6 +1,5 @@
 """Compression of an AVF file."""
 
-import lzma
 from typing import List
 from lzma import LZMAFile
 
@@ -38,11 +37,7 @@ class AVFComp(AVFParser):
 
         return res
 
-    def process_out(self, filename: str):
-        with lzma.open(filename, "wb") as fout:  # use lzma for compression
-            self.write_data(fout)
-
-    def write_events(self, fout: LZMAFile):
+    def write_events(self, fout):
         fout.write(b"\x00\x01")
 
         op: List[int] = []
@@ -90,7 +85,7 @@ class AVFComp(AVFParser):
         fout.write(len(data).to_bytes(3, byteorder="big"))
         fout.write(data)
 
-    def write_mines(self, fout: LZMAFile):
+    def write_mines(self, fout):
         size = (self.rows * self.cols + 7) // 8
         data = bytearray(size)
         for mine in self.mines:
@@ -100,6 +95,6 @@ class AVFComp(AVFParser):
             data[byte_idx] |= 1 << (7 - bit_idx)
         fout.write(data)
 
-    def write_footer(self, fout: LZMAFile):
+    def write_footer(self, fout):
         footer_simp = b"\r".join(self.footer)
         fout.write(footer_simp)

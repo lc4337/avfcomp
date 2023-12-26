@@ -1,6 +1,5 @@
 """Decompression of an AVF file."""
 
-import lzma
 from typing import List
 from lzma import LZMAFile
 
@@ -36,11 +35,7 @@ class AVFDecomp(AVFParser):
 
         return res
 
-    def process_in(self, filename: str):
-        with lzma.open(filename, "rb") as fin:
-            self.read_data(fin)
-
-    def read_events(self, fin: LZMAFile):
+    def read_events(self, fin):
         # Read op codes
         data_len = int.from_bytes(fin.read(3), byteorder="big")
         data = fin.read(data_len)
@@ -95,7 +90,7 @@ class AVFDecomp(AVFParser):
             }
             self.events.append(event)
 
-    def read_mines(self, fin: LZMAFile):
+    def read_mines(self, fin):
         cols, rows = self.cols, self.rows
         size = (rows * cols + 7) // 8
         data = fin.read(size)
@@ -109,6 +104,6 @@ class AVFDecomp(AVFParser):
                     mine = (j + 1, i + 1)
                     self.mines.append(mine)
 
-    def read_footer(self, fin: LZMAFile):
+    def read_footer(self, fin):
         footer_simp = fin.read()
         self.footer = footer_simp.split(b"\r")
