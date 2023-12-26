@@ -1,10 +1,10 @@
 """Base parser for AVF files."""
 
-from io import BufferedWriter, BufferedReader, SEEK_CUR
-from lzma import LZMAFile
-from typing import List, Dict, Tuple, Union
+from io import SEEK_CUR
+from typing import List, Dict, Tuple
 
 from . import config
+from .basecomp import copen, CompType, T_CompType, T_CompFile
 
 
 class AVFParser:
@@ -46,7 +46,7 @@ class AVFParser:
         self.prefix, self.prestamp, self.ts_info = b"", b"", b""
         self.preevent, self.presuffix = b"", b""
 
-    def read_mines(self, fin: Union[BufferedReader, LZMAFile]):
+    def read_mines(self, fin: T_CompFile):
         """Write the mines to the input buffer."""
         self.mines = []
         for _ in range(self.num_mines):
@@ -54,7 +54,7 @@ class AVFParser:
             col = ord(fin.read(1))
             self.mines.append((row, col))
 
-    def read_events(self, fin: Union[BufferedReader, LZMAFile]):
+    def read_events(self, fin: T_CompFile):
         """Write the events to the input buffer."""
         fin.seek(-3, SEEK_CUR)
         self.preevent = self.preevent[:-1]
@@ -83,7 +83,7 @@ class AVFParser:
                 }
             )
 
-    def read_footer(self, fin: Union[BufferedReader, LZMAFile]):
+    def read_footer(self, fin: T_CompFile):
         """Write the footer to the input buffer."""
         footer_raw = fin.read()
         footer_list = footer_raw.split(b"\r")
@@ -93,7 +93,7 @@ class AVFParser:
 
         self.footer = [skin_v, idt, abt_v]
 
-    def read_data(self, fin: Union[BufferedReader, LZMAFile]):
+    def read_data(self, fin: T_CompFile):
         """Process the buffer data and extract information from the AVF file."""
         # version
         self.version = ord(fin.read(1))
@@ -156,18 +156,18 @@ class AVFParser:
         # section => extract game time from the second to last event
         self.read_footer(fin)
 
-    def process_in(self, filename: str):
+    def process_in(self, filename: str, in_type: T_CompType = CompType.PLAIN):
         """Process the AVF file and parse the data to memory."""
-        with open(filename, "rb") as fin:
+        with copen(filename, "rb", _type=in_type) as fin:
             self.read_data(fin)
 
-    def write_mines(self, fout: Union[BufferedWriter, LZMAFile]):
+    def write_mines(self, fout: T_CompFile):
         """Write the mines to the output buffer."""
         for mine in self.mines:
             fout.write(mine[0].to_bytes(1, byteorder="big"))
             fout.write(mine[1].to_bytes(1, byteorder="big"))
 
-    def write_events(self, fout: Union[BufferedWriter, LZMAFile]):
+    def write_events(self, fout: T_CompFile):
         """Write the events to the output buffer."""
         for event in self.events:
             mouse = event["type"]
@@ -186,7 +186,7 @@ class AVFParser:
             fout.write((sec >> 8).to_bytes(1, byteorder="big"))
             fout.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
 
-    def write_footer(self, fout: Union[BufferedWriter, LZMAFile]):
+    def write_footer(self, fout: T_CompFile):
         """Write the footer to the output buffer."""
         rtime = str(self.events[-1]["gametime"] // 1000).encode("cp1252") + self.ts_info.split(b"|")[-1][-3:]
         rtime_raw = b"RealTime: %s" % rtime
@@ -197,7 +197,7 @@ class AVFParser:
         footer_raw = b"\r".join([rtime_raw, skin_raw, idt_raw, abt_raw])
         fout.write(footer_raw)
 
-    def write_data(self, fout: Union[BufferedWriter, LZMAFile]):
+    def write_data(self, fout: T_CompFile):
         """Write the data to the output buffer."""
         fout.write(self.version.to_bytes(1, byteorder="big"))
 
@@ -223,7 +223,7 @@ class AVFParser:
 
         self.write_footer(fout)
 
-    def process_out(self, filename: str):
+    def process_out(self, filename: str, out_type: T_CompType = CompType.PLAIN):
         """Process the AVF file and write the output to a file."""
-        with open(filename, "wb") as fout:
+        with copen(filename, "wb", out_type) as fout:
             self.write_data(fout)
