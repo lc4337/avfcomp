@@ -68,16 +68,18 @@ def get_comp(paths: str, method: T_CompType) -> Tuple[int, int]:
 
 
 @cost_time
-def get_decomp(paths: str, method: T_CompType) -> int:
+def get_decomp(paths: str, method: T_CompType) -> Tuple[int, int]:
     """Decompress all files."""
-    decompsize = 0
+    decompsize_in = 0
+    decompsize_out = 0
     cvf = AVFDecomp()
     for name, file_path in list_files(paths):
         cvf.process_in(file_path, method)
-        decompsize += path.getsize(file_path)
+        decompsize_in += path.getsize(file_path)
         decomp = path.join(decomp_path, name.replace("cvf", "avf"))
         cvf.process_out(decomp)
-    return decompsize
+        decompsize_out += path.getsize(decomp)
+    return (decompsize_in, decompsize_out)
 
 
 def stat_comp(paths: str, method: T_CompType, mode: str = ""):
@@ -92,8 +94,10 @@ def stat_comp(paths: str, method: T_CompType, mode: str = ""):
 def stat_decomp(paths: str, method: T_CompType):
     """Get the statistics of decompressed files."""
     size, dtime = get_decomp(paths, method)
-    speed = (size / dtime) / 1024 / 1024
-    print(f"{speed:.2f} MB/s")
+    in_size, out_size = size
+    in_speed = (in_size / dtime) / 1024 / 1024
+    out_speed = (out_size / dtime) / 1024 / 1024
+    print(f"in: {in_speed:.2f} MB/s | out: {out_speed:.2f} MB/s")
 
 
 class TestCompAndDecomp(unittest.TestCase):
@@ -117,7 +121,6 @@ class TestCompAndDecomp(unittest.TestCase):
 
         print("Test decompression: ")
         stat_decomp(cvf_path, method)
-
         self.check_decomp(beg_path)
         self.check_decomp(int_path)
         self.check_decomp(exp_path)

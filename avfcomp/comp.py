@@ -1,6 +1,7 @@
 """Compression of an AVF file."""
 
 from typing import List
+from lzma import LZMAFile
 
 from .base import AVFParser
 
