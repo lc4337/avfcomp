@@ -1,12 +1,12 @@
 """Base compression library which deals with multiple compression formats."""
 
-from enum import IntEnum
-from io import BufferedReader, BufferedWriter
-from gzip import GzipFile
 from bz2 import BZ2File
+from enum import IntEnum
+from gzip import GzipFile
+from io import BufferedReader, BufferedWriter
 from lzma import LZMAFile
-
 from typing import Literal, Union
+
 
 class CompType(IntEnum):
     """Compression type."""

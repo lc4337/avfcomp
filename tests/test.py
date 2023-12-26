@@ -1,12 +1,11 @@
 """Test compression and decompression."""
 
-import unittest
-
 import hashlib
-import time
 import shutil
-from os import listdir, path, mkdir
-from typing import Iterator, Tuple, Callable, Any
+import time
+import unittest
+from os import listdir, mkdir, path
+from typing import Any, Callable, Iterator, Tuple
 
 from avfcomp import AVFComp, AVFDecomp, CompType
 from avfcomp.basecomp import T_CompType

@@ -1,10 +1,10 @@
 """Base parser for AVF files."""
 
 from io import SEEK_CUR
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 from . import config
-from .basecomp import copen, CompType, T_CompType, T_CompFile
+from .basecomp import CompType, T_CompFile, T_CompType, copen
 
 
 class AVFParser:
