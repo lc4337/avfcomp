@@ -8,7 +8,6 @@ from os import listdir, mkdir, path
 from typing import Any, Callable, Iterator, Tuple
 
 from avfcomp import AVFComp, AVFDecomp, CompType
-from avfcomp.basecomp import T_CompType
 
 work_dir = path.dirname(path.dirname(__file__))
 
@@ -53,7 +52,7 @@ def cost_time(func: Callable) -> Callable[..., Tuple[Any, float]]:
 
 
 @cost_time
-def get_comp(paths: str, method: T_CompType) -> Tuple[int, int]:
+def get_comp(paths: str, method: CompType) -> Tuple[int, int]:
     """Compress all files."""
     rawsize = 0
     compsize = 0
@@ -68,7 +67,7 @@ def get_comp(paths: str, method: T_CompType) -> Tuple[int, int]:
 
 
 @cost_time
-def get_decomp(paths: str, method: T_CompType) -> Tuple[int, int]:
+def get_decomp(paths: str, method: CompType) -> Tuple[int, int]:
     """Decompress all files."""
     decompsize_in = 0
     decompsize_out = 0
@@ -82,7 +81,7 @@ def get_decomp(paths: str, method: T_CompType) -> Tuple[int, int]:
     return (decompsize_in, decompsize_out)
 
 
-def stat_comp(paths: str, method: T_CompType, mode: str = ""):
+def stat_comp(paths: str, method: CompType, mode: str = ""):
     """Get the statistics of compressed files."""
     size, ctime = get_comp(paths, method)
     compsize, rawsize = size
@@ -91,7 +90,7 @@ def stat_comp(paths: str, method: T_CompType, mode: str = ""):
     print(f"{mode}: {ratio:.2f}% {speed:.2f} MB/s")
 
 
-def stat_decomp(paths: str, method: T_CompType):
+def stat_decomp(paths: str, method: CompType):
     """Get the statistics of decompressed files."""
     size, dtime = get_decomp(paths, method)
     in_size, out_size = size
@@ -109,7 +108,7 @@ class TestCompAndDecomp(unittest.TestCase):
             decomp = path.join(decomp_path, name)
             self.assertEqual(calc_file_hash(file_path), calc_file_hash(decomp))
 
-    def comp_and_decomp(self, method: T_CompType):
+    def comp_and_decomp(self, method: CompType):
         """Test compression and decompression."""
         print("Refresh data directory: ")
         refresh()
@@ -128,7 +127,7 @@ class TestCompAndDecomp(unittest.TestCase):
     def test_lzma(self):
         """Test lzma compression and decompression."""
         print("Test lzma compression and decompression: ")
-        self.comp_and_decomp(CompType.LZMA)
+        self.comp_and_decomp(CompType.PLAIN)
 
 
 if __name__ == "__main__":

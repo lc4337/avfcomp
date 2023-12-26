@@ -4,7 +4,7 @@ from io import SEEK_CUR
 from typing import Dict, List, Tuple
 
 from . import config
-from .basecomp import CompType, T_CompFile, T_CompType, copen
+from .basecomp import CompType, T_CompFile, copen
 
 
 class AVFParser:
@@ -156,7 +156,7 @@ class AVFParser:
         # section => extract game time from the second to last event
         self.read_footer(fin)
 
-    def process_in(self, filename: str, in_type: T_CompType = CompType.PLAIN):
+    def process_in(self, filename: str, in_type: CompType = CompType.PLAIN):
         """Process the AVF file and parse the data to memory."""
         with copen(filename, "rb", _type=in_type) as fin:
             self.read_data(fin)
@@ -223,7 +223,7 @@ class AVFParser:
 
         self.write_footer(fout)
 
-    def process_out(self, filename: str, out_type: T_CompType = CompType.PLAIN):
+    def process_out(self, filename: str, out_type: CompType = CompType.PLAIN):
         """Process the AVF file and write the output to a file."""
         with copen(filename, "wb", out_type) as fout:
             self.write_data(fout)
