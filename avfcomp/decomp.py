@@ -3,7 +3,7 @@
 from typing import List, Callable
 
 from .base import AVFParser
-from .comptype import CompType, T_CompFile, T_CompType, get_copen
+from .handler import CompHandler, T_CompFile
 
 
 class AVFDecomp(AVFParser):
@@ -35,13 +35,13 @@ class AVFDecomp(AVFParser):
 
         return res
 
-    def __init__(self, comptype: T_CompType = CompType.LZMA):
+    def __init__(self, handler: Callable[..., T_CompFile] = CompHandler.LZMA):
         super().__init__()
-        self.copen: Callable[..., T_CompFile] = get_copen(comptype)
+        self.handler = handler
 
     def process_in(self, filename: str):
         """Process the CVF file and parse the data to memory."""
-        with self.copen(filename, "rb") as fin:
+        with self.handler(filename, "rb") as fin:
             self.read_data(fin)
 
     def read_events(self, fin):

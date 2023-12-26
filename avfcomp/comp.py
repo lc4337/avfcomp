@@ -3,7 +3,7 @@
 from typing import List, Callable
 
 from .base import AVFParser
-from .comptype import CompType, T_CompFile, T_CompType, get_copen
+from .handler import CompHandler, T_CompFile
 
 
 class AVFComp(AVFParser):
@@ -37,13 +37,13 @@ class AVFComp(AVFParser):
 
         return res
 
-    def __init__(self, comptype: T_CompType = CompType.LZMA):
+    def __init__(self, handler: Callable[..., T_CompFile] = CompHandler.LZMA):
         super().__init__()
-        self.copen: Callable[..., T_CompFile] = get_copen(comptype)
+        self.handler = handler
 
     def process_out(self, filename: str):
         """write the output to a CVF file."""
-        with self.copen(filename, "wb") as fout:
+        with self.handler(filename, "wb") as fout:
             self.write_data(fout)
 
     def write_events(self, fout):

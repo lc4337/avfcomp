@@ -3,19 +3,19 @@
 ## 使用说明
 
 ```python
-from avfcomp import AVFComp, AVFDecomp, CompType
+from avfcomp import AVFComp, AVFDecomp, CompHandler
 
 # compress
 path = "your/path/raw.avf"
 # choose from plain, gzip, bzip2, lzma(default)
-Compressor = AVFComp(comptype=CompType.LZMA)
+Compressor = AVFComp(handler=CompHandler.LZMA)
 Compressor.process_in(path)
 Compressor.process_out("comp.cvf")
 
 # decompress
 path = "your/path/comp.cvf"
 # choose from plain, gzip, bzip2, lzma(default)
-Decompressor = AVFDecomp(comptype=CompType.LZMA)
+Decompressor = AVFDecomp(handler=CompHandler.LZMA)
 Decompressor.process_in(path)
 Decompressor.process_out("raw.avf")
 ```

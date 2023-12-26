@@ -4,7 +4,7 @@ from io import SEEK_CUR
 from typing import Dict, List, Tuple
 
 from . import config
-from .comptype import T_CompFile
+from .handler import T_CompFile
 
 
 class AVFParser:
