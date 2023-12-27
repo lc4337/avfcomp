@@ -1,6 +1,6 @@
 [project]
 name = "avfcomp"
-version = "1.4.2"
+version = "1.4.3"
 description = "A compression/decompression library for AVF files."
 authors = [
     {name = "Cai Li"},
@@ -18,12 +18,9 @@ classifiers = [
 
 dependencies = []
 
-[tool.setuptools.packages.find]
-where = ["avfcomp"]
-
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [tool.black]
 line-length = 110

@@ -164,3 +164,4 @@ cython_debug/
 
 # misc
 data/
+.pdm-python
