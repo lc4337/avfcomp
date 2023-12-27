@@ -12,7 +12,7 @@ class PersistentStorage:
     def __init__(self) -> None:
         self.file: bytes = b""
         self.filename: str = ""
-        self.is_compressed: bool = False
+        self.is_compressed: bool = True if '.cvf' in self.filename else False
 
 
 ps = PersistentStorage()
@@ -84,7 +84,7 @@ def getdecomp(event):
     decomp_data = BytesIO()
     cvf.write_data(decomp_data)
     cvf_decompressed = decomp_data.getvalue()
-    
+
     ps.file = cvf_decompressed
     ps.filename = ps.filename.replace(".cvf", ".avf")
     ps.is_compressed = False
