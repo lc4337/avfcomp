@@ -12,22 +12,33 @@ class PersistentStorage:
     def __init__(self) -> None:
         self.file: bytes = b""
         self.filename: str = ""
-        self.is_compressed: bool = True if '.cvf' in self.filename else False
+        self.is_compressed: bool = False
 
 
 ps = PersistentStorage()
 
 
 async def upload_file(event):
+    ps.file = b""
+
     file_list = event.target.files
     file = file_list.item(0)
     array_buffer = await file.arrayBuffer()
     file_bytes = array_buffer.to_bytes()
     ps.file = file_bytes
     ps.filename = file.name
+    ps.is_compressed = ".cvf" in ps.filename
+
+    output_div = document.querySelector("#output")
+    output_div.innerText = ""
 
 
 def download_file(*args):
+    if ps.file == b"":
+        output_div = document.querySelector("#output")
+        output_div.innerText = "未选择文件"
+        return
+
     file_stream = BytesIO(ps.file)
 
     js_array = Uint8Array.new(len(ps.file))
@@ -41,18 +52,25 @@ def download_file(*args):
     hidden_link.setAttribute("href", url)
     hidden_link.click()
 
+    output_div = document.querySelector("#output")
+    output_div.innerText = ""
+
 
 def getcomp(event):
     print("Compressing file ...")
-    if ps.is_compressed:
-        print("File is already compressed.")
+    if ps.file == b"":
+        output_div = document.querySelector("#output")
+        output_div.innerText = "未选择文件"
         return
 
-    if ps.file == b"":
-        print("No file uploaded.")
+    if ps.is_compressed:
+        output_div = document.querySelector("#output")
+        output_div.innerText = "文件已经被压缩, 请重试"
         return
 
     cvf = AVFComp()
+
+    original_size = len(ps.file)
 
     data_io = BytesIO(ps.file)
     cvf.read_data(data_io)
@@ -61,21 +79,28 @@ def getcomp(event):
         cvf.write_data(fout)
     cvf_compressed = comp_data.getvalue()
 
+    compressed_size = len(cvf_compressed)
+
     ps.file = cvf_compressed
     ps.filename = ps.filename.replace(".avf", ".cvf")
     ps.is_compressed = True
+
+    output_div = document.querySelector("#output")
+    output_div.innerText = f"压缩完成, 压缩率为: {compressed_size / original_size * 100:.2f}%, 可下载压缩后的文件"
 
     print("File compressed.")
 
 
 def getdecomp(event):
     print("Decompressing file ...")
-    if not ps.is_compressed:
-        print("File is not compressed.")
+    if ps.file == b"":
+        output_div = document.querySelector("#output")
+        output_div.innerText = "未选择文件"
         return
 
-    if ps.file == b"":
-        print("No file uploaded.")
+    if not ps.is_compressed:
+        output_div = document.querySelector("#output")
+        output_div.innerText = "文件已经被解压, 请重试"
         return
 
     cvf = AVFDecomp()
@@ -88,6 +113,9 @@ def getdecomp(event):
     ps.file = cvf_decompressed
     ps.filename = ps.filename.replace(".cvf", ".avf")
     ps.is_compressed = False
+
+    output_div = document.querySelector("#output")
+    output_div.innerText = "解压完成, 可下载解压后的文件"
 
     print("File decompressed.")
 
