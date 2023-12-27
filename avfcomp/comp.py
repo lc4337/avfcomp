@@ -1,9 +1,10 @@
 """Compression of an AVF file."""
 
+from io import BytesIO
 from typing import List, Callable
 
 from .base import AVFParser
-from .handler import CompHandler, T_CompFile
+from .handler import T_CompFile, CompHandler
 
 
 class AVFComp(AVFParser):
@@ -40,6 +41,18 @@ class AVFComp(AVFParser):
     def __init__(self, handler: Callable[..., T_CompFile] = CompHandler.LZMA):
         super().__init__()
         self.handler = handler
+
+    def compress(self, data: bytes) -> bytes:
+        data_io = BytesIO(data)
+        self.read_data(data_io)
+
+        comp_data = BytesIO()
+        if self.handler is not CompHandler.PLAIN:
+            with self.handler(comp_data, "wb") as fout:
+                self.write_data(fout)
+        else:
+            self.write_data(comp_data)
+        return comp_data.getvalue()
 
     def process_out(self, filename: str):
         """write the output to a CVF file."""

@@ -1,9 +1,10 @@
 """Decompression of an AVF file."""
 
+from io import BytesIO
 from typing import List, Callable
 
 from .base import AVFParser
-from .handler import CompHandler, T_CompFile
+from .handler import T_CompFile, CompHandler
 
 
 class AVFDecomp(AVFParser):
@@ -38,6 +39,18 @@ class AVFDecomp(AVFParser):
     def __init__(self, handler: Callable[..., T_CompFile] = CompHandler.LZMA):
         super().__init__()
         self.handler = handler
+
+    def decompress(self, data: bytes) -> bytes:
+        data_io = BytesIO(data)
+        if self.handler is not CompHandler.PLAIN:
+            with self.handler(data_io, "rb") as fin:
+                self.read_data(fin)
+        else:
+            self.read_data(data_io)
+
+        decomp_data = BytesIO()
+        self.write_data(decomp_data)
+        return decomp_data.getvalue()
 
     def process_in(self, filename: str):
         """Process the CVF file and parse the data to memory."""

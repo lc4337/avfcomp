@@ -62,6 +62,10 @@ def get_comp(paths: str, handler: Callable[..., T_CompFile]) -> Tuple[int, int]:
         rawsize += path.getsize(file_path)
         cvf.process_in(file_path)
         comp = path.join(cvf_path, name.replace("avf", "cvf"))
+        # with open(file_path, "rb") as fin, open(comp, "wb") as fout:
+        #     data_in = fin.read()
+        #     data_out = cvf.compress(data_in)
+        #     fout.write(data_out)
         cvf.process_out(comp)
         compsize += path.getsize(comp)
     return (compsize, rawsize)
@@ -77,6 +81,10 @@ def get_decomp(paths: str, handler: Callable[..., T_CompFile]) -> Tuple[int, int
         cvf.process_in(file_path)
         decompsize_in += path.getsize(file_path)
         decomp = path.join(decomp_path, name.replace("cvf", "avf"))
+        # with open(file_path, "rb") as fin, open(decomp, "wb") as fout:
+        #     data_in = fin.read()
+        #     data_out = cvf.decompress(data_in)
+        #     fout.write(data_out)
         cvf.process_out(decomp)
         decompsize_out += path.getsize(decomp)
     return (decompsize_in, decompsize_out)
