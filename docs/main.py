@@ -19,6 +19,8 @@ ps = PersistentStorage()
 
 
 async def upload_file(event):
+    ps.file = b""
+
     file_list = event.target.files
     file = file_list.item(0)
     array_buffer = await file.arrayBuffer()
