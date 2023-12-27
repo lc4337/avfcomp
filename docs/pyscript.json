@@ -1,11 +1,3 @@
 {
-    "packages": [ "lzma" ],
-    "files": {
-        "../avfcomp/__init__.py": "./avfcomp/__init__.py",
-        "../avfcomp/base.py": "./avfcomp/base.py",
-        "../avfcomp/comp.py": "./avfcomp/comp.py",
-        "../avfcomp/config.py": "./avfcomp/config.py",
-        "../avfcomp/decomp.py": "./avfcomp/decomp.py",
-        "../avfcomp/handler.py": "./avfcomp/handler.py"
-    }
+    "packages": [ "lzma", "avfcomp" ]
 }

@@ -43,6 +43,7 @@ class AVFComp(AVFParser):
         self.handler = handler
 
     def compress(self, data: bytes) -> bytes:
+        """Compression in bytes."""
         data_io = BytesIO(data)
         self.read_data(data_io)
 
