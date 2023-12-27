@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <title>AVFComp/AVFDecomp Demo</title>
+      <script type="module" src="https://pyscript.net/releases/2023.12.1/core.js"></script>
+  </head>
+  <body>
+    <h1>AVF 压缩解压工具</h1>
+    <h2>工具说明: 选择文件, 点击压缩或解压, 然后下载处理后的文件.</h2>
+    <label for="Upload a File"></label>
+    <input type="file" id="file" name="avfcomp" accept=".avf,.cvf" />
+    <button py-click="getcomp">压缩</button>
+    <button py-click="getdecomp">解压</button>
+    <button id="download">下载文件</button>
+    <div id="output"></div>
+    <script type="py" src="./main.py" config="./pyscript.json"></script>
+  </body>
+</html>
