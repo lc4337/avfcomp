@@ -1,10 +1,9 @@
 """Base parser for AVF files."""
 
-from io import SEEK_CUR
+from io import BytesIO, SEEK_CUR
 from typing import Dict, List, Tuple
 
 from . import config
-from .handler import T_CompFile
 
 
 class AVFParser:
@@ -49,51 +48,61 @@ class AVFParser:
     def process_in(self, filename: str):
         """Process the AVF file and parse the data to memory."""
         with open(filename, "rb") as fin:
-            self.read_data(fin)
+            data = BytesIO(fin.read())
+        self.read_data(data)
+
+    def process_in_bytes(self, data: bytes):
+        """Process the AVF bytes and parse the data to memory."""
+        self.read_data(BytesIO(data))
 
     def process_out(self, filename: str):
-        """Process the AVF file and write the output to a file."""
+        """Process the AVF data and write the output to a file."""
+        data = self.write_data()
         with open(filename, "wb") as fout:
-            self.write_data(fout)
+            fout.write(data.getvalue())
 
-    def read_data(self, fin: T_CompFile):
+    def process_out_bytes(self) -> bytes:
+        """Process the AVF data and write the output to bytes."""
+        return self.write_data().getvalue()
+
+    def read_data(self, data: BytesIO):
         """Process the buffer data and extract information from the AVF file."""
         # version
-        self.version = ord(fin.read(1))
+        self.version = ord(data.read(1))
 
         # no idea what these bytes do
-        self.prefix = fin.read(4)
+        self.prefix = data.read(4)
 
-        self.level = ord(fin.read(1))
+        self.level = ord(data.read(1))
 
         if 3 <= self.level < 6:
             self.cols, self.rows, self.num_mines = self.LEVELS_STAT[self.level - 3]
         elif self.level == 6:
-            self.cols = ord(fin.read(1)) + 1
-            self.rows = ord(fin.read(1)) + 1
-            self.num_mines = int.from_bytes(fin.read(2), byteorder="big")
+            self.cols = ord(data.read(1)) + 1
+            self.rows = ord(data.read(1)) + 1
+            self.num_mines = int.from_bytes(data.read(2), byteorder="big")
 
-        self.read_mines(fin)
+        self.read_mines(data)
 
         self.prestamp = b""
         while True:
-            char = fin.read(1)
+            char = data.read(1)
             if char == b"[":
                 break
             self.prestamp += char
 
         self.ts_info = b""
         while True:
-            char = fin.read(1)
+            char = data.read(1)
             if char == b"]":
                 break
             self.ts_info += char
 
         # read preevent
-        self.preevent = fin.read(1)
+        self.preevent = data.read(1)
         last = ord(self.preevent)
         while True:
-            char = fin.read(1)
+            char = data.read(1)
             cur = ord(char)
             if last <= 1 and cur == 1:
                 break
@@ -101,65 +110,61 @@ class AVFParser:
             self.preevent += char
         self.preevent = self.preevent[:-1]
 
-        self.read_events(fin)
+        self.read_events(data)
 
-        buffer = fin.read(2)
+        buffer = data.read(2)
         self.presuffix = buffer
         last2, last1 = buffer
         ref = tuple(b"cs=")
         while True:
-            char = fin.read(1)
+            char = data.read(1)
             cur = ord(char)
             self.presuffix += char
             if (last2, last1, cur) == ref:
                 break
             last2, last1 = last1, cur
-        self.presuffix += fin.read(17)
+        self.presuffix += data.read(17)
 
-        self.read_footer(fin)
+        self.read_footer(data)
 
-    def write_data(self, fout: T_CompFile):
+    def write_data(self) -> BytesIO:
         """Write the data to the output buffer."""
-        fout.write(self.version.to_bytes(1, byteorder="big"))
+        data = BytesIO()
 
-        fout.write(self.prefix)
-
-        fout.write(self.level.to_bytes(1, byteorder="big"))
+        data.write(self.version.to_bytes(1, byteorder="big"))
+        data.write(self.prefix)
+        data.write(self.level.to_bytes(1, byteorder="big"))
         if self.level == 6:
-            fout.write((self.cols - 1).to_bytes(1, byteorder="big"))
-            fout.write((self.rows - 1).to_bytes(1, byteorder="big"))
-            fout.write(self.num_mines.to_bytes(2, byteorder="big"))
+            data.write((self.cols - 1).to_bytes(1, byteorder="big"))
+            data.write((self.rows - 1).to_bytes(1, byteorder="big"))
+            data.write(self.num_mines.to_bytes(2, byteorder="big"))
 
-        self.write_mines(fout)
+        self.write_mines(data)
+        data.write(self.prestamp)
+        data.write(b"[%s]" % self.ts_info)
+        data.write(self.preevent)
+        self.write_events(data)
+        data.write(self.presuffix)
+        self.write_footer(data)
 
-        fout.write(self.prestamp)
+        return data
 
-        fout.write(b"[%s]" % self.ts_info)
-
-        fout.write(self.preevent)
-
-        self.write_events(fout)
-
-        fout.write(self.presuffix)
-
-        self.write_footer(fout)
-
-    def read_mines(self, fin: T_CompFile):
+    def read_mines(self, data: BytesIO):
         """Write the mines to the input buffer."""
         self.mines = []
         for _ in range(self.num_mines):
-            row = ord(fin.read(1))
-            col = ord(fin.read(1))
+            row = ord(data.read(1))
+            col = ord(data.read(1))
             self.mines.append((row, col))
 
-    def read_events(self, fin: T_CompFile):
+    def read_events(self, data: BytesIO):
         """Write the events to the input buffer."""
-        fin.seek(-3, SEEK_CUR)
+        data.seek(-3, SEEK_CUR)
         self.preevent = self.preevent[:-1]
         self.events = []
 
         while True:
-            buffer = fin.read(8)
+            buffer = data.read(8)
             mouse, x1, s2, x2, hun, y1, s1, y2 = tuple(buffer)
             xpos = (x1 << 8) + x2
             ypos = (y1 << 8) + y2
@@ -167,7 +172,7 @@ class AVFParser:
             gametime = 1000 * sec + 10 * hun
 
             if sec < 0:
-                fin.seek(-8, SEEK_CUR)
+                data.seek(-8, SEEK_CUR)
                 break
 
             assert mouse in self.MOUSE_EVENT_TYPES
@@ -181,9 +186,9 @@ class AVFParser:
                 }
             )
 
-    def read_footer(self, fin: T_CompFile):
+    def read_footer(self, data: BytesIO):
         """Write the footer to the input buffer."""
-        footer_raw = fin.read()
+        footer_raw = data.read()
         footer_list = footer_raw.split(b"\r")
         skin_v = footer_list[1][footer_list[1].find(b"Skin: ") + 6 :]
         idt = footer_list[2]
@@ -191,13 +196,13 @@ class AVFParser:
 
         self.footer = [skin_v, idt, abt_v]
 
-    def write_mines(self, fout: T_CompFile):
+    def write_mines(self, data: BytesIO):
         """Write the mines to the output buffer."""
         for mine in self.mines:
-            fout.write(mine[0].to_bytes(1, byteorder="big"))
-            fout.write(mine[1].to_bytes(1, byteorder="big"))
+            data.write(mine[0].to_bytes(1, byteorder="big"))
+            data.write(mine[1].to_bytes(1, byteorder="big"))
 
-    def write_events(self, fout: T_CompFile):
+    def write_events(self, data: BytesIO):
         """Write the events to the output buffer."""
         for event in self.events:
             mouse = event["type"]
@@ -207,16 +212,16 @@ class AVFParser:
             sec = gametime // 1000 + 1
             hun = (gametime % 1000) // 10
 
-            fout.write(mouse.to_bytes(1, byteorder="big"))
-            fout.write((xpos >> 8).to_bytes(1, byteorder="big"))
-            fout.write((sec & 0xFF).to_bytes(1, byteorder="big"))
-            fout.write((xpos & 0xFF).to_bytes(1, byteorder="big"))
-            fout.write(hun.to_bytes(1, byteorder="big"))
-            fout.write((ypos >> 8).to_bytes(1, byteorder="big"))
-            fout.write((sec >> 8).to_bytes(1, byteorder="big"))
-            fout.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
+            data.write(mouse.to_bytes(1, byteorder="big"))
+            data.write((xpos >> 8).to_bytes(1, byteorder="big"))
+            data.write((sec & 0xFF).to_bytes(1, byteorder="big"))
+            data.write((xpos & 0xFF).to_bytes(1, byteorder="big"))
+            data.write(hun.to_bytes(1, byteorder="big"))
+            data.write((ypos >> 8).to_bytes(1, byteorder="big"))
+            data.write((sec >> 8).to_bytes(1, byteorder="big"))
+            data.write((ypos & 0xFF).to_bytes(1, byteorder="big"))
 
-    def write_footer(self, fout: T_CompFile):
+    def write_footer(self, data: BytesIO):
         """Write the footer to the output buffer."""
         rtime = str(self.events[-1]["gametime"] // 1000).encode("cp1252") + self.ts_info.split(b"|")[-1][-3:]
         rtime_raw = b"RealTime: %s" % rtime
@@ -225,4 +230,4 @@ class AVFParser:
         abt_raw = b"Minesweeper Arbiter %s. Copyright \xa9 2005-2006 Dmitriy I. Sukhomlynov" % self.footer[2]
 
         footer_raw = b"\r".join([rtime_raw, skin_raw, idt_raw, abt_raw])
-        fout.write(footer_raw)
+        data.write(footer_raw)

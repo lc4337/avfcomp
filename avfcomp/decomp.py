@@ -1,5 +1,6 @@
 """Decompression of an AVF file."""
 
+from io import BytesIO
 from typing import List, Callable
 
 from .base import AVFParser
@@ -41,18 +42,19 @@ class AVFDecomp(AVFParser):
 
     def process_in(self, filename: str):
         """Process the CVF file and parse the data to memory."""
-        with self.handler(filename, "rb") as fin:
-            self.read_data(fin)
+        with self.handler(filename, "rb") as data:
+            data = BytesIO(data.read())
+            self.read_data(data)
 
-    def read_events(self, fin):
+    def read_events(self, data):
         # Read op codes
-        data_len = int.from_bytes(fin.read(3), byteorder="big")
-        data = fin.read(data_len)
+        data_len = int.from_bytes(data.read(3), byteorder="big")
+        data_dcmp = data.read(data_len)
 
-        num_events = data.index(b"\xff")
-        op = list(data[:num_events])
+        num_events = data_dcmp.index(b"\xff")
+        op = list(data_dcmp[:num_events])
 
-        left_data = self.varint_decompression(data[num_events + 1 :])
+        left_data = self.varint_decompression(data_dcmp[num_events + 1 :])
         left_events = len(left_data) // 3
         left_event_cur = 0
 
@@ -99,20 +101,20 @@ class AVFDecomp(AVFParser):
             }
             self.events.append(event)
 
-    def read_mines(self, fin):
+    def read_mines(self, data):
         cols, rows = self.cols, self.rows
         size = (rows * cols + 7) // 8
-        data = fin.read(size)
+        mine_grid = data.read(size)
         self.mines = []
         for i in range(cols):
             for j in range(rows):
                 idx = j * cols + i
                 byte_idx = idx // 8
                 bit_idx = idx % 8
-                if (data[byte_idx] >> (7 - bit_idx)) & 1:
+                if (mine_grid[byte_idx] >> (7 - bit_idx)) & 1:
                     mine = (j + 1, i + 1)
                     self.mines.append(mine)
 
-    def read_footer(self, fin):
-        footer_simp = fin.read()
+    def read_footer(self, data):
+        footer_simp = data.read()
         self.footer = footer_simp.split(b"\r")

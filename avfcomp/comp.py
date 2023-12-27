@@ -44,10 +44,11 @@ class AVFComp(AVFParser):
     def process_out(self, filename: str):
         """write the output to a CVF file."""
         with self.handler(filename, "wb") as fout:
-            self.write_data(fout)
+            data = self.write_data()
+            fout.write(data.getvalue())
 
-    def write_events(self, fout):
-        fout.write(b"\x00\x01")
+    def write_events(self, data):
+        data.write(b"\x00\x01")
 
         op: List[int] = []
         timestamps: List[int] = []
@@ -90,20 +91,20 @@ class AVFComp(AVFParser):
                 ypos_r.append(ypos[i])
 
         data_r = timestamps_r + xpos_r + ypos_r
-        data = bytes(op) + b"\xff" + self.varint_compression(data_r)
-        fout.write(len(data).to_bytes(3, byteorder="big"))
-        fout.write(data)
+        data_cmp = bytes(op) + b"\xff" + self.varint_compression(data_r)
+        data.write(len(data_cmp).to_bytes(3, byteorder="big"))
+        data.write(data_cmp)
 
-    def write_mines(self, fout):
+    def write_mines(self, data):
         size = (self.rows * self.cols + 7) // 8
-        data = bytearray(size)
+        mine_grid = bytearray(size)
         for mine in self.mines:
             idx = (mine[0] - 1) * self.cols + (mine[1] - 1)
             byte_idx = idx // 8
             bit_idx = idx % 8
-            data[byte_idx] |= 1 << (7 - bit_idx)
-        fout.write(data)
+            mine_grid[byte_idx] |= 1 << (7 - bit_idx)
+        data.write(mine_grid)
 
-    def write_footer(self, fout):
+    def write_footer(self, data):
         footer_simp = b"\r".join(self.footer)
-        fout.write(footer_simp)
+        data.write(footer_simp)
