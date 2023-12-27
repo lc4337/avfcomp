@@ -41,6 +41,7 @@ class AVFDecomp(AVFParser):
         self.handler = handler
 
     def decompress(self, data: bytes) -> bytes:
+        """Decompression in bytes."""
         data_io = BytesIO(data)
         if self.handler is not CompHandler.PLAIN:
             with self.handler(data_io, "rb") as fin:
